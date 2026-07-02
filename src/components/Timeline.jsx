@@ -167,7 +167,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
                   <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled}
-                    onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+                    onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
                 ))}
               </AnimatePresence>
             </div>

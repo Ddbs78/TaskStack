@@ -54,16 +54,24 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   // to state on release; magnetizes home near the bottom-center dock. -----------
   const updateEdge = (e) => {
     if (dragging) return
+    // never start a move from an interactive control (buttons, input, and their
+    // popovers like the time picker, which live *above* the bar in the DOM).
+    if (e.target?.closest?.('button, input, [role="button"], .st-nodrag')) { setOnEdge(false); return }
     const r = barRef.current?.getBoundingClientRect()
     if (!r) return
-    const near =
+    // must be *inside* the bar rect, then within EDGE of a border — otherwise a
+    // point above the bar (e.g. an open popover) falsely reads as "near the top edge".
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+    const near = inside && (
       e.clientX - r.left < EDGE || r.right - e.clientX < EDGE ||
       e.clientY - r.top < EDGE || r.bottom - e.clientY < EDGE
+    )
     setOnEdge(near)
   }
 
   const onBarPointerDown = (e) => {
     if (!onEdge || e.button === 2) return
+    if (e.target?.closest?.('button, input, [role="button"], .st-nodrag')) return
     e.preventDefault()
     document.body.style.userSelect = 'none'
     const inner = innerRef.current
@@ -74,7 +82,11 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     const dockLeft = window.innerWidth / 2 - w / 2
     const dockTop = window.innerHeight - 16 - h
     setDragging(true)
+    // pin to the current on-screen position *before* clearing the docked
+    // transform/bottom, so the bar never flashes to left:50%/top:0 (top-right corner).
+    const wr = wrap.getBoundingClientRect()
     wrap.style.transition = 'none'; wrap.style.transform = 'none'; wrap.style.bottom = 'auto'
+    wrap.style.left = wr.left + 'px'; wrap.style.top = wr.top + 'px'
     let last = null
     const move = (ev) => {
       let x = Math.min(window.innerWidth - w - 6, Math.max(6, ev.clientX - offx))
@@ -87,8 +99,16 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     const up = () => {
       setDragging(false); document.body.style.userSelect = ''
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
-      if (!last || last.dist < 70) setPos(null)
-      else setPos({ x: last.x, y: last.y })
+      if (!last || last.dist < 70) {
+        // clear the imperative inline styles so React's docked style fully re-applies
+        // (React won't remove a `top` it never set → it would otherwise stick).
+        wrap.style.left = ''; wrap.style.top = ''; wrap.style.bottom = ''
+        wrap.style.transform = ''; wrap.style.transition = ''
+        setPos(null)
+      } else {
+        wrap.style.transition = ''
+        setPos({ x: last.x, y: last.y })
+      }
     }
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
   }

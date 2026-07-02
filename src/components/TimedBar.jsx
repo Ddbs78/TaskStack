@@ -15,6 +15,16 @@ const variants = {
   exit: { opacity: 0, scale: 1.1, filter: 'blur(6px)', transition: { duration: 0.28 } },
 }
 
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+const snap15 = (m) => Math.round(m / 15) * 15
+function durLabel(mins) {
+  const h = Math.floor(mins / 60)
+  const m = Math.round(mins % 60)
+  if (h && m) return `${h} hr ${m} min`
+  if (h) return `${h} hr${h > 1 ? 's' : ''}`
+  return `${m} min`
+}
+
 function timeLeftLabel(end, nowMin, passed) {
   if (passed) return 'ended'
   const m = Math.max(0, Math.round(end - nowMin))
@@ -25,7 +35,8 @@ function timeLeftLabel(end, nowMin, passed) {
   return `${m} min${m === 1 ? '' : 's'} left`
 }
 
-const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit }, ref) {
+const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize }, ref) {
+  // timed calendar bar with hover peek + drag-to-resize ends
   const start = task.start ?? 0
   const end = task.end != null && task.end > start ? task.end : start + 30
   const left = fracOf(start) * 100
@@ -52,7 +63,7 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
   const [peek, setPeek] = useState(null)
   const closeTimer = useRef(null)
   const openPeek = (e) => {
-    if (!canPeek) return
+    if (!canPeek || draggingRef.current) return
     clearTimeout(closeTimer.current)
     const r = e.currentTarget.getBoundingClientRect()
     const W = 196
@@ -63,14 +74,83 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
       w: W,
     })
   }
-  const scheduleClose = () => { closeTimer.current = setTimeout(() => setPeek(null), 120) }
+  const scheduleClose = () => { if (!draggingRef.current) closeTimer.current = setTimeout(() => setPeek(null), 120) }
   const keepOpen = () => clearTimeout(closeTimer.current)
+
+  // ---- duration resize (drag either end; 15-min snap; live tooltip) -----------
+  // Imperative during the gesture — we mutate the bar's left/width and the tooltip
+  // directly each frame (no per-frame React state), and commit start/end only on
+  // release. Only shown on bars wide enough to grab without fighting the controls.
+  const localRef = useRef(null)
+  const setRefs = (node) => {
+    localRef.current = node
+    if (typeof ref === 'function') ref(node)
+    else if (ref) ref.current = node
+  }
+  const draggingRef = useRef(false)
+  const [dragging, setDragging] = useState(null) // {top} while resizing → renders the tooltip
+  const tipRef = useRef(null)
+  const canResize = !!onResize && px > 60
+
+  const onHandleDown = (edge) => (e) => {
+    if (!onResize) return
+    e.preventDefault(); e.stopPropagation()
+    try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch {}
+    clearTimeout(closeTimer.current); setPeek(null)
+    draggingRef.current = true
+    const node = localRef.current
+    const prevTransition = node.style.transition
+    node.style.transition = 'none'
+    const barTop = node.getBoundingClientRect().top
+    const startX = e.clientX
+    const origStart = start, origEnd = end
+    const minPerPx = 1440 / dayWidth
+    let next = { start: origStart, end: origEnd }
+    setDragging({ top: barTop, x: startX })
+
+    const move = (ev) => {
+      const dx = (ev.clientX - startX) * minPerPx
+      if (edge === 'start') next.start = clamp(origStart + dx, 0, origEnd - 15)
+      else next.end = clamp(origEnd + dx, origStart + 15, 1440)
+      node.style.left = `${fracOf(next.start) * 100}%`
+      node.style.width = `${(fracOf(next.end) - fracOf(next.start)) * 100}%`
+      if (tipRef.current) {
+        tipRef.current.style.left = `${ev.clientX}px`
+        tipRef.current.textContent = durLabel(next.end - next.start)
+      }
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
+      draggingRef.current = false
+      node.style.transition = prevTransition
+      const s = snap15(next.start), en = Math.max(s + 15, snap15(next.end))
+      setDragging(null)
+      if (s !== origStart || en !== origEnd) onResize(task.id, { start: s, end: en })
+      else { node.style.left = ''; node.style.width = '' } // no change → let React styles reassert
+    }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
+  }
+
+  // element-returning helper (NOT a component defined in render — that would remount
+  // the handle DOM on every re-render and break the in-flight drag / pointer capture)
+  const renderHandle = (edge) => (
+    <div
+      key={`h-${edge}`}
+      onPointerDown={onHandleDown(edge)}
+      onMouseEnter={keepOpen}
+      className={`cursor-ew absolute inset-y-0 z-[3] flex w-[11px] items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 ${edge === 'start' ? 'left-0' : 'right-0'}`}
+      style={{ touchAction: 'none' }}
+      aria-label={`Resize ${edge}`}
+    >
+      <span className="h-[13px] w-[3px] rounded-full" style={{ background: 'color-mix(in srgb, currentColor 55%, transparent)' }} />
+    </div>
+  )
 
   return (
     <>
       <motion.div
-        ref={ref}
-        layout
+        ref={setRefs}
+        layout={!dragging}
         variants={variants}
         initial="initial"
         animate="animate"
@@ -80,9 +160,11 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
         onDoubleClick={() => onDelete(task.id)}
         onMouseEnter={openPeek}
         onMouseLeave={scheduleClose}
-        className={`absolute flex items-center overflow-hidden rounded-[11px] ${tiny ? 'justify-center px-0 gap-0' : 'gap-1.5 px-1.5'}`}
+        className={`group absolute flex items-center overflow-hidden rounded-[11px] ${tiny ? 'justify-center px-0 gap-0' : 'gap-1.5 px-1.5'}`}
         style={{ ...style, left: `${left}%`, width: `${width}%`, minWidth: 26, top: lane * 34, height: 30, boxShadow: tinted ? undefined : 'var(--shadow-card)' }}
       >
+        {canResize && renderHandle('start')}
+        {canResize && renderHandle('end')}
         {elapsed > 0 && !passed && (
           <div className="pointer-events-none absolute inset-y-0 left-0 z-0" style={{ width: `${elapsed * 100}%`, background: fillBg }} />
         )}
@@ -106,6 +188,17 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
           <Icon name="chevronRight" size={12} stroke={2.1} />
         </button>
       </motion.div>
+
+      {dragging && createPortal(
+        <div
+          ref={tipRef}
+          className="fixed z-[70] -translate-x-1/2 -translate-y-full rounded-lg px-2 py-1 text-[11px] font-semibold tabular-nums shadow-lg"
+          style={{ left: dragging.x, top: dragging.top - 8, background: 'var(--surface-2)', color: 'var(--text)', border: '0.5px solid var(--hairline)' }}
+        >
+          {durLabel(end - start)}
+        </div>,
+        document.body
+      )}
 
       {peek && createPortal(
         <div
