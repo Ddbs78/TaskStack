@@ -130,17 +130,7 @@ body {
   background: var(--now-line);
   transition: box-shadow 0.25s ease;
 }
-.nowline-hit {
-  position: absolute;
-  left: 50%;
-  top: 22px;
-  bottom: 0;
-  width: 14px;
-  transform: translateX(-50%);
-  pointer-events: auto;
-  cursor: ew-resize;
-}
-.nowline-travel:hover .nowline-bar {
+.nowline-bar.glow {
   box-shadow: 0 0 10px 2px var(--now-glow);
 }
 .nowline-pill {
@@ -158,11 +148,22 @@ body {
   pointer-events: none;
 }
 
-/* custom move cursor (four-arrow) shown when hovering the chat bar's border */
-.cursor-move-4 {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3'/%3E%3C/svg%3E") 13 13, move;
-}
+/* custom cursors for the chat bar: slim four-arrow move (corners) + bracket-grip
+   resize (edges). Theme-aware: light stroke on dark, dark stroke on light. */
+[data-theme='dark'] .cursor-move-4 { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23d6d6d6' stroke-width='1.35' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M4 12h16M9.5 6.5l2.5-2.5 2.5 2.5M9.5 17.5l2.5 2.5 2.5-2.5M6.5 9.5l-2.5 2.5 2.5 2.5M17.5 9.5l2.5 2.5-2.5 2.5'/%3E%3C/svg%3E") 11 11, move; }
+[data-theme='light'] .cursor-move-4 { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23555555' stroke-width='1.35' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M4 12h16M9.5 6.5l2.5-2.5 2.5 2.5M9.5 17.5l2.5 2.5 2.5-2.5M6.5 9.5l-2.5 2.5 2.5 2.5M17.5 9.5l2.5 2.5-2.5 2.5'/%3E%3C/svg%3E") 11 11, move; }
+
+[data-theme='dark'] .cursor-ew { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23d6d6d6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 8l-4 4 4 4M15 8l4 4-4 4'/%3E%3C/svg%3E") 11 11, ew-resize; }
+[data-theme='light'] .cursor-ew { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23555555' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 8l-4 4 4 4M15 8l4 4-4 4'/%3E%3C/svg%3E") 11 11, ew-resize; }
+
+[data-theme='dark'] .cursor-ns { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23d6d6d6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9l4-4 4 4M8 15l4 4 4-4'/%3E%3C/svg%3E") 11 11, ns-resize; }
+[data-theme='light'] .cursor-ns { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23555555' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 9l4-4 4 4M8 15l4 4 4-4'/%3E%3C/svg%3E") 11 11, ns-resize; }
+
 .cursor-moving { cursor: grabbing; }
+
+/* subtle corner handles that brighten on bar hover (move affordance) */
+.bar-corner { position: absolute; width: 9px; height: 9px; border-color: var(--text-faint); opacity: 0; transition: opacity 0.18s ease; pointer-events: none; }
+.js-chatbar:hover .bar-corner { opacity: 0.55; }
 
 /* slot-machine fade: tasks dissolve at the bottom edge of a scroll area (§1.3) */
 .slot-fade {

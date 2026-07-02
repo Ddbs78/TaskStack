@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import TimePopover from './TimePopover'
 import Icon from './Icon'
 import { parseInput } from '../nlp/parse'
-import { addDays, dateKey, fmtRange, formatHeader, keyToDate } from '../state/time'
+import { addDays, dateKey } from '../state/time'
 
 const VIEWS = [
   { id: 'three', label: '3-Day' },
@@ -24,9 +24,9 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   const [onEdge, setOnEdge] = useState(false)
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef(null)
+  const dateRef = useRef(null)
   const barRef = useRef(null)
   const innerRef = useRef(null)
-  const dragOff = useRef({ dx: 0, dy: 0 })
 
   const parsed = useMemo(() => parseInput(text), [text])
   const effectiveDate = dateOverride || (parsed.detectedDate ? parsed.date : dateKey(new Date()))
@@ -49,17 +49,9 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     inputRef.current?.focus()
   }
 
-  const chipDate = useMemo(() => {
-    const k = effectiveDate
-    const today = dateKey(new Date())
-    if (k === today) return 'Today'
-    if (k === dateKey(addDays(new Date(), 1))) return 'Tomorrow'
-    return formatHeader(keyToDate(k)).replace(/,.*/, (m) => m) // keep full
-  }, [effectiveDate])
-
-  const showChips = text.trim().length > 0
-
-  // ---- drag from the bar's border (cursor becomes the move symbol) ----------
+  // ---- move the bar by grabbing its border (no resize — minimize/expand covers
+  // size). Imperative during drag (no per-frame re-render → no child lag); commits
+  // to state on release; magnetizes home near the bottom-center dock. -----------
   const updateEdge = (e) => {
     if (dragging) return
     const r = barRef.current?.getBoundingClientRect()
@@ -69,70 +61,51 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
       e.clientY - r.top < EDGE || r.bottom - e.clientY < EDGE
     setOnEdge(near)
   }
-  const beginDrag = (e) => {
+
+  const onBarPointerDown = (e) => {
     if (!onEdge || e.button === 2) return
-    const r = innerRef.current.getBoundingClientRect()
-    dragOff.current = { dx: e.clientX - r.left, dy: e.clientY - r.top }
+    e.preventDefault()
+    document.body.style.userSelect = 'none'
+    const inner = innerRef.current
+    const wrap = inner.parentElement
+    const r = inner.getBoundingClientRect()
+    const w = r.width, h = r.height
+    const offx = e.clientX - r.left, offy = e.clientY - r.top
+    const dockLeft = window.innerWidth / 2 - w / 2
+    const dockTop = window.innerHeight - 16 - h
     setDragging(true)
+    wrap.style.transition = 'none'; wrap.style.transform = 'none'; wrap.style.bottom = 'auto'
+    let last = null
     const move = (ev) => {
-      const w = r.width, h = r.height
-      const x = Math.min(window.innerWidth - w - 6, Math.max(6, ev.clientX - dragOff.current.dx))
-      const y = Math.min(window.innerHeight - h - 6, Math.max(6, ev.clientY - dragOff.current.dy))
-      setPos({ x, y })
+      let x = Math.min(window.innerWidth - w - 6, Math.max(6, ev.clientX - offx))
+      let y = Math.min(window.innerHeight - h - 6, Math.max(6, ev.clientY - offy))
+      const dist = Math.hypot(x - dockLeft, y - dockTop)
+      if (dist < 90) { const pull = (1 - dist / 90) * 0.7; x += (dockLeft - x) * pull; y += (dockTop - y) * pull }
+      wrap.style.left = x + 'px'; wrap.style.top = y + 'px'
+      last = { x, y, dist }
     }
     const up = () => {
-      setDragging(false)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
+      setDragging(false); document.body.style.userSelect = ''
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
+      if (!last || last.dist < 70) setPos(null)
+      else setPos({ x: last.x, y: last.y })
     }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
   }
 
+  const innerWidth = minimized ? 'min(88vw, 23rem)' : 'min(92vw, 44rem)'
   const wrapStyle = pos
     ? { left: pos.x, top: pos.y }
     : { left: '50%', bottom: 'max(14px, env(safe-area-inset-bottom))', transform: 'translateX(-50%)' }
   const cursorClass = dragging ? 'cursor-moving' : onEdge ? 'cursor-move-4' : ''
 
   return (
-    <div className="pointer-events-none fixed z-40 px-3" style={wrapStyle}>
+    <div className="pointer-events-none fixed z-40" style={wrapStyle}>
       <div
         ref={innerRef}
         className="pointer-events-auto"
-        style={{ width: minimized ? 'min(88vw, 23rem)' : 'min(92vw, 44rem)', transition: 'width 0.28s var(--ease-spring)' }}
+        style={{ width: innerWidth, transition: dragging ? 'none' : 'width 0.28s var(--ease-spring)' }}
       >
-        {/* preview chips */}
-        <AnimatePresence>
-          {showChips && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              className="mb-2 flex flex-wrap items-center gap-2 px-2"
-            >
-              <Chip active>{chipDate}</Chip>
-              <Chip active={effectiveTime.start != null}>{fmtRange(effectiveTime.start, effectiveTime.end)}</Chip>
-              {parsed.title && parsed.title !== text.trim() && (
-                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>→ “{parsed.title}”</span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* time popover */}
-        <AnimatePresence>
-          {showTime && !minimized && (
-            <div className="mb-3 flex justify-end pr-6">
-              <TimePopover
-                start={effectiveTime.start}
-                end={effectiveTime.end}
-                onChange={(t) => setTime(t)}
-                onClose={() => setShowTime(false)}
-              />
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* view menu */}
         <AnimatePresence>
           {showMenu && !minimized && (
@@ -175,8 +148,8 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
             ref={barRef}
             onPointerMove={updateEdge}
             onPointerLeave={() => setOnEdge(false)}
-            onPointerDown={beginDrag}
-            className={`js-chatbar flex items-center gap-1 rounded-[28px] px-3 py-2.5 backdrop-blur ${cursorClass}`}
+            onPointerDown={onBarPointerDown}
+            className={`js-chatbar relative flex select-none items-center gap-1 rounded-[28px] px-3 py-2.5 backdrop-blur ${cursorClass}`}
             style={{ background: 'color-mix(in srgb, var(--surface) 94%, transparent)', border: '0.5px solid var(--hairline)', boxShadow: '0 14px 38px -12px rgba(0,0,0,0.55)' }}
           >
             <input
@@ -185,7 +158,7 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && submit()}
               placeholder="What Needs Doing…"
-              className="font-display min-w-0 flex-1 bg-transparent px-3 text-[clamp(18px,2.6vw,28px)] outline-none placeholder:opacity-50"
+              className="font-display min-w-0 flex-1 select-text bg-transparent px-3 text-[clamp(18px,2.6vw,28px)] outline-none placeholder:opacity-50"
               style={{ color: 'var(--text)' }}
             />
 
@@ -203,17 +176,40 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
               <div className="flex items-center gap-1">
                 <PillBtn onClick={() => setDateOverride(dateKey(new Date()))} active={effectiveDate === dateKey(new Date())}>Today</PillBtn>
                 <PillBtn onClick={() => setDateOverride(dateKey(addDays(new Date(), 1)))} active={effectiveDate === dateKey(addDays(new Date(), 1))}>Tmrw</PillBtn>
-                <label className="hidden sm:block">
-                  <span className="sr-only">Custom date</span>
+                <div className="relative hidden sm:block">
+                  <button
+                    type="button"
+                    onClick={() => { const el = dateRef.current; if (el?.showPicker) el.showPicker(); else el?.focus() }}
+                    className="rounded-full px-1.5 py-1 text-sm tabular-nums"
+                    style={{ color: 'var(--text-soft)' }}
+                  >
+                    {effectiveDate.slice(5, 7)}/{effectiveDate.slice(8, 10)}
+                  </button>
                   <input
+                    ref={dateRef}
                     type="date"
+                    aria-label="Custom date"
+                    tabIndex={-1}
                     value={effectiveDate}
                     onChange={(e) => setDateOverride(e.target.value)}
-                    className="w-[34px] cursor-pointer rounded-full bg-transparent text-center text-sm"
-                    style={{ color: 'var(--text-soft)' }}
+                    className="pointer-events-none absolute bottom-0 left-1/2 h-0 w-0 opacity-0"
                   />
-                </label>
-                <IconBtn onClick={() => setShowTime((v) => !v)} active={showTime || effectiveTime.start != null} title="Set time"><Icon name="clock" size={19} /></IconBtn>
+                </div>
+                <div className="relative">
+                  <IconBtn onClick={() => setShowTime((v) => !v)} active={showTime || effectiveTime.start != null} title="Set time"><Icon name="clock" size={19} /></IconBtn>
+                  <AnimatePresence>
+                    {showTime && (
+                      <div className="absolute bottom-[calc(100%+14px)] left-1/2 z-50 -translate-x-1/2">
+                        <TimePopover
+                          start={effectiveTime.start}
+                          end={effectiveTime.end}
+                          onChange={(t) => setTime(t)}
+                          onClose={() => setShowTime(false)}
+                        />
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <IconBtn onClick={() => setShowMenu((v) => !v)} active={showMenu} title="More"><Icon name="dots" size={19} /></IconBtn>
                 <button
                   onClick={submit}
@@ -233,16 +229,6 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   )
 }
 
-function Chip({ children, active }) {
-  return (
-    <span
-      className="rounded-full px-3 py-1 text-xs font-bold"
-      style={{ background: active ? 'var(--blue-strong)' : 'var(--surface-2)', color: active ? '#fff' : 'var(--text-soft)' }}
-    >
-      {children}
-    </span>
-  )
-}
 function PillBtn({ children, onClick, active }) {
   return (
     <button

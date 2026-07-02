@@ -17,6 +17,24 @@ export function displayDateKey(task, today = todayKey()) {
   return isOverdue(task, today) ? today : task.date
 }
 
+// How much of a TODAY task has elapsed relative to the now-line (0..1).
+// Anytime tasks measure against the whole day; timed tasks against their span.
+export function elapsedFraction(task, nowMin, today = todayKey()) {
+  if (task.done || task.date !== today) return 0
+  if (task.start == null) return Math.min(1, Math.max(0, nowMin / 1440))
+  const end = task.end != null && task.end > task.start ? task.end : task.start + 30
+  if (nowMin <= task.start) return 0
+  return Math.min(1, (nowMin - task.start) / (end - task.start))
+}
+
+// A timed today-task whose end time has fully passed → "0 days overdue" in place
+// (it only jumps to the overdue stack at the next midnight).
+export function elapsedToday(task, nowMin, today = todayKey()) {
+  if (task.done || task.date !== today || task.start == null) return false
+  const end = task.end != null && task.end > task.start ? task.end : task.start + 30
+  return nowMin >= end
+}
+
 // Sort within a day: overdue (top, by most overdue) -> timed (by start) -> anytime.
 export function sortForDay(tasks, today = todayKey()) {
   return [...tasks].sort((a, b) => {

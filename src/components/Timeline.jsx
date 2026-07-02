@@ -29,10 +29,11 @@ export default function Timeline({ store, now, onEdit, actions }) {
   const today = todayKey()
   const mobile = useIsMobile()
   const variant = store.settings.taskStyle || 'filled'
+  const tintEnabled = store.settings.overdueTint !== false
   const scrollerRef = useRef(null)
+  const nowBarRef = useRef(null)
   const [dayWidth, setDayWidth] = useState(360)
-  const [scrollLeft, setScrollLeft] = useState(0)
-  const centered = useRef(false)
+  const [lineEase, setLineEase] = useState(false)
 
   const onToggle = actions?.complete || store.toggleTask
   const onDelete = actions?.remove || store.deleteTask
@@ -60,27 +61,29 @@ export default function Timeline({ store, now, onEdit, actions }) {
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    const target = mobile ? PAST * dayWidth : (PAST - 1) * dayWidth
-    el.scrollLeft = target
-    setScrollLeft(target)
-    centered.current = true
+    el.scrollLeft = mobile ? PAST * dayWidth : (PAST - 1) * dayWidth
   }, [dayWidth, mobile])
 
-  // track horizontal scroll (throttled via rAF) for the flowing marker axis
+  // the now-line starts exactly on the current time (no transition) and only eases
+  // for subsequent minute drift once layout has settled.
   useEffect(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    let raf = 0
-    const onScroll = () => {
-      if (raf) return
-      raf = requestAnimationFrame(() => { raf = 0; setScrollLeft(el.scrollLeft) })
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => { el.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf) }
+    const t = setTimeout(() => setLineEase(true), 700)
+    return () => clearTimeout(t)
   }, [])
+
+  // hover-glow the now-line without blocking clicks: the line is pointer-events:none;
+  // we toggle the glow by cursor proximity to its current screen x.
+  const onTimelineMove = (e) => {
+    const el = nowBarRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const near = Math.abs(e.clientX - (r.left + r.width / 2)) < 9
+    el.classList.toggle('glow', near)
+  }
 
   const contentWidth = (PAST + FUT + 1) * dayWidth
   const nowContentX = PAST * dayWidth + nowFraction(now) * dayWidth
+  const nowMin = now.getHours() * 60 + now.getMinutes()
 
   const gridBg = {
     backgroundImage:
@@ -92,15 +95,15 @@ export default function Timeline({ store, now, onEdit, actions }) {
     <div className="relative h-full">
       <div
         ref={scrollerRef}
+        onMouseMove={onTimelineMove}
         className="no-scrollbar h-full overflow-x-auto overflow-y-hidden"
         style={{ scrollSnapType: mobile ? 'x mandatory' : 'none' }}
       >
         <div className="relative h-full" style={{ width: contentWidth, ...gridBg }}>
-          {/* now-line travels across today's column */}
-          <div className="nowline-travel" style={{ left: nowContentX, transition: 'left 30s linear' }}>
+          {/* now-line travels across today's column (pointer-events:none → clicks pass through) */}
+          <div className="nowline-travel" style={{ left: nowContentX, transition: lineEase ? 'left 30s linear' : 'none' }}>
             <div className="nowline-pill">{fmtTime(now.getHours() * 60 + now.getMinutes())}</div>
-            <div className="nowline-hit" />
-            <div className="nowline-bar" />
+            <div ref={nowBarRef} className="nowline-bar" />
           </div>
 
           <div className="flex h-full">
@@ -113,6 +116,8 @@ export default function Timeline({ store, now, onEdit, actions }) {
                 isToday={dateKey(d) === today}
                 store={store}
                 today={today}
+                nowMin={nowMin}
+                tintEnabled={tintEnabled}
                 variant={variant}
                 onEdit={onEdit}
                 onToggle={onToggle}
@@ -123,12 +128,12 @@ export default function Timeline({ store, now, onEdit, actions }) {
         </div>
       </div>
 
-      <MarkerAxis dayWidth={dayWidth} scrollLeft={scrollLeft} />
+      <MarkerAxis dayWidth={dayWidth} scrollerRef={scrollerRef} />
     </div>
   )
 }
 
-function DayCol({ date, dayWidth, mobile, isToday, store, today, variant, onEdit, onToggle, onDelete }) {
+function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, variant, onEdit, onToggle, onDelete }) {
   const key = dateKey(date)
   const active = store.tasks.filter((t) => !t.done && displayDateKey(t, today) === key)
   const completed = store.tasks.filter((t) => t.done && t.date === key).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
@@ -149,11 +154,11 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, variant, onEdit
         {formatHeader(date)}
       </div>
 
-      <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto px-1.5 pb-24">
+      <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
         <div className="flex flex-col gap-3">
           <AnimatePresence mode="popLayout" initial={false}>
             {overdue.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </AnimatePresence>
 
@@ -161,7 +166,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, variant, onEdit
             <div className="relative" style={{ height: laneCount * 34 }}>
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
-                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant}
+                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled}
                     onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
                 ))}
               </AnimatePresence>
@@ -170,7 +175,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, variant, onEdit
 
           <AnimatePresence mode="popLayout" initial={false}>
             {anytime.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </AnimatePresence>
 
@@ -189,50 +194,87 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, variant, onEdit
   )
 }
 
-// Fixed bottom axis: 3-hour tick labels aligned to the gridlines, lifting up and
-// over the chat bar wherever it sits.
-function MarkerAxis({ dayWidth, scrollLeft }) {
-  const ref = useRef(null)
+// Fixed bottom axis: 3-hour tick labels aligned to the gridlines. A continuous
+// rAF reads the live scroll position AND the chat bar's current rect every frame,
+// so markers track the bar instantly on minimize/move/resize (no scroll needed)
+// and lift over it — but only while the bar sits within a low band near the bottom
+// (the "ceiling"); lifted past it, markers snap back to their baseline row.
+const CEIL_FROM_BOTTOM = 84 // ~1.5 bar-heights
+const RAMP = 44
+const POOL = 32
+
+function MarkerAxis({ dayWidth, scrollerRef }) {
+  const axisRef = useRef(null)
+  const pool = useRef([])
+  const springs = useRef([]) // per-slot {cur, vel} so lift eases/rebounds smoothly
   const tickW = dayWidth / 8
-  const marks = []
-  if (ref.current) {
-    const W = ref.current.clientWidth
-    const bar = document.querySelector('.js-chatbar')
-    const oRect = ref.current.getBoundingClientRect()
-    let barL = Infinity, barR = -Infinity, barTop = 0
-    if (bar) {
-      const b = bar.getBoundingClientRect()
-      barL = b.left - oRect.left
-      barR = b.right - oRect.left
-      barTop = b.top - oRect.top
-    }
-    const ramp = 44
-    const lift = (x) => {
-      if (x < barL - ramp || x > barR + ramp) return 0
-      if (x > barL && x < barR) return 1
-      if (x <= barL) return (x - (barL - ramp)) / ramp
-      return (barR + ramp - x) / ramp
-    }
-    const baseY = oRect.height - 18
-    const start = Math.floor(scrollLeft / tickW)
-    for (let i = start; ; i++) {
-      const x = i * tickW - scrollLeft
-      if (x > W + tickW) break
-      if (x < -tickW) continue
-      const t = Math.max(0, Math.min(1, lift(x)))
+
+  useEffect(() => {
+    const axis = axisRef.current
+    const scroller = scrollerRef.current
+    if (!axis || !scroller || !tickW) return
+    let raf = 0
+    const K = 0.16, DAMP = 0.74 // spring → gentle rubber-band rebound to baseline
+    const loop = () => {
+      const W = axis.clientWidth
+      const H = axis.clientHeight
+      const o = axis.getBoundingClientRect()
+      const sl = scroller.scrollLeft
+      const bar = document.querySelector('.js-chatbar')
+      let barL = Infinity, barR = -Infinity, barTop = 0, active = false
+      if (bar) {
+        const b = bar.getBoundingClientRect()
+        barL = b.left - o.left
+        barR = b.right - o.left
+        barTop = b.top - o.top
+        active = o.bottom - b.bottom < CEIL_FROM_BOTTOM
+      }
+      const baseY = H - 32
       const liftY = barTop - 22
-      const y = t > 0 ? baseY - t * (baseY - liftY) : baseY
-      const isBoundary = ((i % 8) + 8) % 8 === 0
-      marks.push(
-        <div key={i} className="pointer-events-none absolute top-0 left-0 text-center"
-          style={{ transform: `translate(${x}px, ${y}px) translateX(-50%)`, willChange: 'transform' }}>
-          <div className="mx-auto h-[5px] w-px" style={{ background: 'var(--tick)' }} />
-          <div className="mt-1 text-[10px] tabular-nums" style={{ color: isBoundary ? 'var(--text-soft)' : 'var(--text-faint)' }}>
-            {LABELS[((i % 8) + 8) % 8]}
-          </div>
-        </div>
-      )
+      const startIdx = Math.floor(sl / tickW)
+      for (let p = 0; p < pool.current.length; p++) {
+        const el = pool.current[p]
+        if (!el) continue
+        const s = springs.current[p] || (springs.current[p] = { cur: 0, vel: 0 })
+        const idx = startIdx + p
+        const x = idx * tickW - sl
+        const offscreen = x < -tickW || x > W + tickW
+        let target = 0
+        if (active && !offscreen) {
+          if (x > barL && x < barR) target = 1
+          else if (x >= barL - RAMP && x <= barL) target = (x - (barL - RAMP)) / RAMP
+          else if (x >= barR && x <= barR + RAMP) target = (barR + RAMP - x) / RAMP
+        }
+        if (target < 0) target = 0
+        if (target > 1) target = 1
+        if (offscreen) { s.cur = target; s.vel = 0; el.style.opacity = '0'; continue }
+        // spring toward the target lift (rebounds instead of snapping)
+        s.vel += (target - s.cur) * K
+        s.vel *= DAMP
+        s.cur += s.vel
+        if (s.cur < 0) { s.cur = 0; s.vel = 0 }
+        if (s.cur > 1.12) s.cur = 1.12
+        el.style.opacity = '1'
+        el.style.transform = `translate(${x}px, ${baseY - s.cur * (baseY - liftY)}px) translateX(-50%)`
+        const m = ((idx % 8) + 8) % 8
+        const lab = el.firstElementChild.nextElementSibling
+        lab.textContent = LABELS[m]
+        lab.style.color = m === 0 ? 'var(--text-soft)' : 'var(--text-faint)'
+      }
+      raf = requestAnimationFrame(loop)
     }
-  }
-  return <div ref={ref} className="pointer-events-none absolute inset-x-0 bottom-0 h-7" aria-hidden="true">{marks}</div>
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [tickW, scrollerRef])
+
+  return (
+    <div ref={axisRef} className="pointer-events-none absolute inset-x-0 bottom-0 h-11" aria-hidden="true">
+      {Array.from({ length: POOL }).map((_, i) => (
+        <div key={i} ref={(el) => (pool.current[i] = el)} className="absolute top-0 left-0 text-center" style={{ willChange: 'transform', opacity: 0 }}>
+          <div className="mx-auto h-[5px] w-px" style={{ background: 'var(--tick)' }} />
+          <div className="mt-1 text-[10px] tabular-nums" />
+        </div>
+      ))}
+    </div>
+  )
 }

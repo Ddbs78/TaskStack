@@ -31,6 +31,7 @@ function loadTasks() {
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
   taskStyle: 'filled', // filled | tinted
+  overdueTint: true, // gradual blue→coral fill as the now-line passes; else stay blue until fully past
   notifications: false,
   reduceMotion: false,
   aiKey: '',
