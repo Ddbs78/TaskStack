@@ -9,14 +9,21 @@ const PAST = 45
 const FUT = 45
 const LABELS = ['12a', '3a', '6a', '9a', '12p', '3p', '6p', '9p']
 
-// greedy lane packing so overlapping timed tasks stack vertically
-function packLanes(timed) {
+const BAR_MIN_PX = 42 // keep in sync with TimedBar MIN_PX
+const BAR_GAP_PX = 6
+
+// greedy lane packing so timed tasks stack vertically. Uses each task's *effective*
+// span (its true span OR the min render width, whichever is wider) so that short
+// tasks inflated to the min width don't visually overlap their time-neighbours.
+function packLanes(timed, dayWidth) {
+  const minMin = dayWidth ? ((BAR_MIN_PX + BAR_GAP_PX) / dayWidth) * 1440 : 0
   const sorted = [...timed].sort((a, b) => (a.start ?? 0) - (b.start ?? 0))
   const laneEnds = []
   const out = []
   for (const t of sorted) {
     const s = t.start ?? 0
-    const e = t.end != null && t.end > s ? t.end : s + 30
+    const trueE = t.end != null && t.end > s ? t.end : s + 30
+    const e = Math.max(trueE, s + minMin) // effective end = accounts for the min render width
     let lane = laneEnds.findIndex((end) => end <= s)
     if (lane === -1) { lane = laneEnds.length; laneEnds.push(e) }
     else laneEnds[lane] = e
@@ -140,7 +147,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
   const overdue = active.filter((t) => isOverdue(t, today)).sort((a, b) => overdueDays(b, today) - overdueDays(a, today))
   const timed = active.filter((t) => !isOverdue(t, today) && t.start != null)
   const anytime = active.filter((t) => !isOverdue(t, today) && t.start == null)
-  const { rows, laneCount } = packLanes(timed)
+  const { rows, laneCount } = packLanes(timed, dayWidth)
 
   return (
     <div
@@ -163,7 +170,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
           </AnimatePresence>
 
           {timed.length > 0 && (
-            <div className="relative" style={{ height: laneCount * 34 }}>
+            <div className="relative" style={{ height: laneCount * 56 - 12 }}>
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
                   <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled}
@@ -206,7 +213,10 @@ const POOL = 32
 function MarkerAxis({ dayWidth, scrollerRef }) {
   const axisRef = useRef(null)
   const pool = useRef([])
-  const springs = useRef([]) // per-slot {cur, vel} so lift eases/rebounds smoothly
+  // spring lift state keyed by ABSOLUTE tick index (not pool slot) so a tick's
+  // lift stays continuous as it scrolls past the bar — keying by slot made the
+  // whole row's lift jump by one tick every time the scroll window shifted.
+  const springMap = useRef(new Map())
   const tickW = dayWidth / 8
 
   useEffect(() => {
@@ -231,14 +241,17 @@ function MarkerAxis({ dayWidth, scrollerRef }) {
       }
       const baseY = H - 32
       const liftY = barTop - 22
-      const startIdx = Math.floor(sl / tickW)
-      for (let p = 0; p < pool.current.length; p++) {
-        const el = pool.current[p]
-        if (!el) continue
-        const s = springs.current[p] || (springs.current[p] = { cur: 0, vel: 0 })
-        const idx = startIdx + p
+      const map = springMap.current
+      const firstIdx = Math.floor(sl / tickW) - 1
+      let p = 0
+      for (let idx = firstIdx; p < pool.current.length; idx++) {
         const x = idx * tickW - sl
-        const offscreen = x < -tickW || x > W + tickW
+        if (x > W + tickW) break
+        const el = pool.current[p]
+        if (!el) { p++; continue }
+        let s = map.get(idx)
+        if (!s) { s = { cur: 0, vel: 0 }; map.set(idx, s) }
+        const offscreen = x < -tickW
         let target = 0
         if (active && !offscreen) {
           if (x > barL && x < barR) target = 1
@@ -247,20 +260,23 @@ function MarkerAxis({ dayWidth, scrollerRef }) {
         }
         if (target < 0) target = 0
         if (target > 1) target = 1
-        if (offscreen) { s.cur = target; s.vel = 0; el.style.opacity = '0'; continue }
         // spring toward the target lift (rebounds instead of snapping)
         s.vel += (target - s.cur) * K
         s.vel *= DAMP
         s.cur += s.vel
         if (s.cur < 0) { s.cur = 0; s.vel = 0 }
         if (s.cur > 1.12) s.cur = 1.12
-        el.style.opacity = '1'
+        el.style.opacity = offscreen ? '0' : '1'
         el.style.transform = `translate(${x}px, ${baseY - s.cur * (baseY - liftY)}px) translateX(-50%)`
         const m = ((idx % 8) + 8) % 8
         const lab = el.firstElementChild.nextElementSibling
         lab.textContent = LABELS[m]
         lab.style.color = m === 0 ? 'var(--text-soft)' : 'var(--text-faint)'
+        p++
       }
+      for (; p < pool.current.length; p++) { const el = pool.current[p]; if (el) el.style.opacity = '0' }
+      // prune springs for ticks far outside the visible window
+      if (map.size > 160) for (const key of map.keys()) if (key < firstIdx - 40 || key > firstIdx + 120) map.delete(key)
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)

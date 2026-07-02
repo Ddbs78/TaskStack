@@ -113,7 +113,7 @@ const TaskCard = forwardRef(function TaskCard(
         onPointerMove={movePress}
         onPointerUp={cancelPress}
         onPointerLeave={cancelPress}
-        className="group relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4 py-3.5"
+        className="group relative flex h-[44px] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4"
         style={{
           ...cardStyle,
           boxShadow: tinted ? undefined : 'var(--shadow-card)',

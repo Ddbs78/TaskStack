@@ -22,7 +22,7 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   const [minimized, setMinimized] = useState(false)
   const [pos, setPos] = useState(null) // {x,y} once dragged; null = docked bottom-center
   const [onEdge, setOnEdge] = useState(false)
-  const [dragging, setDragging] = useState(false)
+  const draggingRef = useRef(false) // ref, not state → the drag never triggers a re-render
   const inputRef = useRef(null)
   const dateRef = useRef(null)
   const barRef = useRef(null)
@@ -53,7 +53,7 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   // size). Imperative during drag (no per-frame re-render → no child lag); commits
   // to state on release; magnetizes home near the bottom-center dock. -----------
   const updateEdge = (e) => {
-    if (dragging) return
+    if (draggingRef.current) return
     // never start a move from an interactive control (buttons, input, and their
     // popovers like the time picker, which live *above* the bar in the DOM).
     if (e.target?.closest?.('button, input, [role="button"], .st-nodrag')) { setOnEdge(false); return }
@@ -73,7 +73,6 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     if (!onEdge || e.button === 2) return
     if (e.target?.closest?.('button, input, [role="button"], .st-nodrag')) return
     e.preventDefault()
-    document.body.style.userSelect = 'none'
     const inner = innerRef.current
     const wrap = inner.parentElement
     const r = inner.getBoundingClientRect()
@@ -81,14 +80,26 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     const offx = e.clientX - r.left, offy = e.clientY - r.top
     const dockLeft = window.innerWidth / 2 - w / 2
     const dockTop = window.innerHeight - 16 - h
-    setDragging(true)
-    // pin to the current on-screen position *before* clearing the docked
-    // transform/bottom, so the bar never flashes to left:50%/top:0 (top-right corner).
-    const wr = wrap.getBoundingClientRect()
-    wrap.style.transition = 'none'; wrap.style.transform = 'none'; wrap.style.bottom = 'auto'
-    wrap.style.left = wr.left + 'px'; wrap.style.top = wr.top + 'px'
-    let last = null
+    const startX = e.clientX, startY = e.clientY
+    const THRESH = 5 // don't detach until it's a real drag → a plain press never moves the bar
+    let pinned = false, last = null
+
+    const pin = () => {
+      // pin to the current on-screen spot BEFORE clearing the docked transform/bottom
+      // (otherwise it flashes to left:50%/top:0 — the old top-right-corner teleport).
+      const wr = wrap.getBoundingClientRect()
+      wrap.style.transition = 'none'; wrap.style.transform = 'none'; wrap.style.bottom = 'auto'
+      wrap.style.left = wr.left + 'px'; wrap.style.top = wr.top + 'px'
+      document.body.style.userSelect = 'none'
+      barRef.current?.classList.add('cursor-moving')
+      draggingRef.current = true
+      pinned = true
+    }
     const move = (ev) => {
+      if (!pinned) {
+        if (Math.abs(ev.clientX - startX) < THRESH && Math.abs(ev.clientY - startY) < THRESH) return
+        pin()
+      }
       let x = Math.min(window.innerWidth - w - 6, Math.max(6, ev.clientX - offx))
       let y = Math.min(window.innerHeight - h - 6, Math.max(6, ev.clientY - offy))
       const dist = Math.hypot(x - dockLeft, y - dockTop)
@@ -97,11 +108,13 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
       last = { x, y, dist }
     }
     const up = () => {
-      setDragging(false); document.body.style.userSelect = ''
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
+      draggingRef.current = false
+      document.body.style.userSelect = ''
+      barRef.current?.classList.remove('cursor-moving')
+      if (!pinned) return // never crossed the threshold → a plain press, bar stays docked
       if (!last || last.dist < 70) {
-        // clear the imperative inline styles so React's docked style fully re-applies
-        // (React won't remove a `top` it never set → it would otherwise stick).
+        // clear the imperative styles so React's docked style fully re-applies
         wrap.style.left = ''; wrap.style.top = ''; wrap.style.bottom = ''
         wrap.style.transform = ''; wrap.style.transition = ''
         setPos(null)
@@ -117,14 +130,14 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   const wrapStyle = pos
     ? { left: pos.x, top: pos.y }
     : { left: '50%', bottom: 'max(14px, env(safe-area-inset-bottom))', transform: 'translateX(-50%)' }
-  const cursorClass = dragging ? 'cursor-moving' : onEdge ? 'cursor-move-4' : ''
+  const cursorClass = onEdge ? 'cursor-move-4' : '' // drag cursor toggled imperatively
 
   return (
     <div className="pointer-events-none fixed z-40" style={wrapStyle}>
       <div
         ref={innerRef}
         className="pointer-events-auto"
-        style={{ width: innerWidth, transition: dragging ? 'none' : 'width 0.28s var(--ease-spring)' }}
+        style={{ width: innerWidth, transition: 'width 0.28s var(--ease-spring)' }}
       >
         {/* view menu */}
         <AnimatePresence>
