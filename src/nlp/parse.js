@@ -78,6 +78,18 @@ export function parseInput(raw, now = new Date()) {
   // --- build cleaned title ---------------------------------------------------
   matched.sort((a, b) => b[0] - a[0])
   for (const [s, e] of matched) text = text.slice(0, s) + ' ' + text.slice(e)
+
+  // --- urgency cues ----------------------------------------------------------
+  // Lets the fast path rank without an extra tap. Deliberately conservative:
+  // only unmistakable words. Runs AFTER the matched-index removal above —
+  // stripping earlier would shift the indices still held in `matched`.
+  let urgency = null
+  const urgentRe = /\s*(!{2,}|\b(urgent|asap|critical)\b)/i
+  const mildRe = /\s*\b(whenever|someday|no rush)\b/i
+  let um
+  if ((um = urgentRe.exec(text))) { urgency = 9; text = text.slice(0, um.index) + ' ' + text.slice(um.index + um[0].length) }
+  else if ((um = mildRe.exec(text))) { urgency = 2; text = text.slice(0, um.index) + ' ' + text.slice(um.index + um[0].length) }
+
   let title = text.replace(/\b(at|on|by|this)\b\s*$/i, '').replace(/\s+/g, ' ').trim()
   title = title.replace(/[\s,]+$/, '').replace(/^[\s,]+/, '')
 
@@ -88,5 +100,6 @@ export function parseInput(raw, now = new Date()) {
     end,
     detectedDate: !!date,
     detectedTime: start != null,
+    urgency,
   }
 }

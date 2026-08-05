@@ -60,6 +60,10 @@ function reducer(state, action) {
         done: false,
         completedAt: null,
         recurrence: action.recurrence ?? null,
+        // null = unranked. Never coerce to 0 — "unranked" and "not urgent at
+        // all" are different states and sort differently (see state/bands.js).
+        urgency: action.urgency ?? null,
+        urgencyOff: action.urgencyOff ?? false,
         createdAt: Date.now(),
       }
       return { ...state, tasks: [...state.tasks, t] }

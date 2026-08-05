@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import TimePopover from './TimePopover'
+import UrgencyBar from './UrgencyBar'
 import Icon from './Icon'
 import { parseInput } from '../nlp/parse'
 import { addDays, dateKey } from '../state/time'
@@ -18,6 +19,9 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   const [dateOverride, setDateOverride] = useState(null) // explicit date key from chips
   const [time, setTime] = useState({ start: null, end: null })
   const [showTime, setShowTime] = useState(false)
+  const [urgency, setUrgency] = useState(null)
+  const [urgencyOff, setUrgencyOff] = useState(false)
+  const [showUrgency, setShowUrgency] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [pos, setPos] = useState(null) // {x,y} once dragged; null = docked bottom-center
@@ -41,11 +45,18 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
       start: effectiveTime.start,
       end: effectiveTime.end,
       recurrence: defaultRecurrence !== 'none' ? defaultRecurrence : null,
+      // minimized = quick capture, which stays quick: it never sets urgency, so
+      // the task lands unranked and can be rated later from the editor.
+      urgency: minimized ? null : urgencyOff ? null : urgency ?? parsed.urgency ?? null,
+      urgencyOff: minimized ? false : urgencyOff,
     })
     setText('')
     setDateOverride(null)
     setTime({ start: null, end: null })
     setShowTime(false)
+    setUrgency(null)
+    setUrgencyOff(false)
+    setShowUrgency(false)
     inputRef.current?.focus()
   }
 
@@ -240,6 +251,33 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
                           onClose={() => setShowTime(false)}
                         />
                       </div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <div className="relative">
+                  <IconBtn
+                    onClick={() => setShowUrgency((v) => !v)}
+                    active={showUrgency || urgencyOff || urgency != null}
+                    title="How much does this matter?"
+                  >
+                    <Icon name="bolt" size={19} />
+                  </IconBtn>
+                  <AnimatePresence>
+                    {showUrgency && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                        className="absolute bottom-[calc(100%+14px)] left-1/2 z-50 w-64 -translate-x-1/2 rounded-2xl p-3.5 shadow-2xl"
+                        style={{ background: 'var(--surface-2)', border: '0.5px solid var(--hairline)' }}
+                      >
+                        <UrgencyBar
+                          value={urgency}
+                          off={urgencyOff}
+                          onChange={(n) => { setUrgency(n); setUrgencyOff(false) }}
+                          onToggleOff={(v) => { setUrgencyOff(v); if (v) setUrgency(null) }}
+                        />
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>

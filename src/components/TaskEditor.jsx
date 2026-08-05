@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import TimePopover from './TimePopover'
+import UrgencyBar from './UrgencyBar'
 import Icon from './Icon'
 import { addDays, dateKey } from '../state/time'
 
@@ -9,10 +10,20 @@ export default function TaskEditor({ task, onClose, store }) {
   const [title, setTitle] = useState(task?.title ?? '')
   const [date, setDate] = useState(task?.date ?? dateKey(new Date()))
   const [time, setTime] = useState({ start: task?.start ?? null, end: task?.end ?? null })
+  const [urgency, setUrgency] = useState(task?.urgency ?? null)
+  const [urgencyOff, setUrgencyOff] = useState(task?.urgencyOff ?? false)
 
   if (!task) return null
   const save = () => {
-    store.updateTask(task.id, { title: title.trim() || task.title, date, start: time.start, end: time.end, anytime: time.start == null })
+    store.updateTask(task.id, {
+      title: title.trim() || task.title,
+      date,
+      start: time.start,
+      end: time.end,
+      anytime: time.start == null,
+      urgency: urgencyOff ? null : urgency,
+      urgencyOff,
+    })
     onClose()
   }
 
@@ -47,6 +58,16 @@ export default function TaskEditor({ task, onClose, store }) {
 
         <div className="mb-4 flex justify-center">
           <TimePopover start={time.start} end={time.end} onChange={setTime} onClose={() => {}} />
+        </div>
+
+        <div className="mb-4 rounded-2xl p-3.5" style={{ background: 'var(--surface-2)' }}>
+          <UrgencyBar
+            value={urgency}
+            off={urgencyOff}
+            calm={!!store.settings.reduceMotion}
+            onChange={(n) => { setUrgency(n); setUrgencyOff(false) }}
+            onToggleOff={(v) => { setUrgencyOff(v); if (v) setUrgency(null) }}
+          />
         </div>
 
         <div className="flex gap-2">
