@@ -12,7 +12,7 @@ import TaskEditor from './components/TaskEditor'
 import UndoToast from './components/UndoToast'
 import Icon from './components/Icon'
 import { isOverdue } from './state/rollover'
-import { todayKey } from './state/time'
+import { todayKey, dateKey, addDays } from './state/time'
 
 export default function App() {
   const store = useStore()
@@ -40,6 +40,17 @@ export default function App() {
       showToast('Task deleted', () => t && store.restoreTask(t))
     },
     uncomplete: (id) => store.toggleTask(id), // from Completed section — no toast
+    // escape valve on the capped overdue pile: shove the hidden overflow to
+    // tomorrow in one tap. Always undoable — it must never feel like a one-way door.
+    bump: (ids) => {
+      if (!ids?.length) return
+      const before = store.tasks.filter((t) => ids.includes(t.id)).map((t) => ({ id: t.id, date: t.date }))
+      store.bulkPatch(ids, { date: dateKey(addDays(new Date(), 1)) })
+      showToast(
+        `bumped ${ids.length} to tomorrow`,
+        () => before.forEach(({ id, date }) => store.updateTask(id, { date }))
+      )
+    },
   }
 
   // reflect reduce-motion preference on the root for CSS hooks

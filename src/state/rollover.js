@@ -50,11 +50,13 @@ export function sortForDay(tasks, today = todayKey()) {
 }
 
 // Group derived task lists keyed by their DISPLAY day.
-export function bucketByDisplayDay(tasks, dayKeys, today = todayKey()) {
+// `includeDone` keeps completed tasks in the bucket (filed under their own date,
+// never floated forward) so views can render a Completed section.
+export function bucketByDisplayDay(tasks, dayKeys, today = todayKey(), { includeDone = false } = {}) {
   const buckets = Object.fromEntries(dayKeys.map((k) => [k, []]))
   for (const t of tasks) {
-    if (t.done) continue
-    const k = displayDateKey(t, today)
+    if (t.done && !includeDone) continue
+    const k = t.done ? t.date : displayDateKey(t, today)
     if (k in buckets) buckets[k].push(t)
   }
   for (const k of dayKeys) buckets[k] = sortForDay(buckets[k], today)

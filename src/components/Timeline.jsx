@@ -3,34 +3,13 @@ import { AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
 import { addDays, dateKey, startOfDay, todayKey, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
-import { isOverdue, displayDateKey, overdueDays } from '../state/rollover'
+import { dayBands, packLanes } from '../state/bands'
+import OverduePile from './OverduePile'
+import CompletedSection from './CompletedSection'
 
 const PAST = 45
 const FUT = 45
 const LABELS = ['12a', '3a', '6a', '9a', '12p', '3p', '6p', '9p']
-
-const BAR_MIN_PX = 42 // keep in sync with TimedBar MIN_PX
-const BAR_GAP_PX = 6
-
-// greedy lane packing so timed tasks stack vertically. Uses each task's *effective*
-// span (its true span OR the min render width, whichever is wider) so that short
-// tasks inflated to the min width don't visually overlap their time-neighbours.
-function packLanes(timed, dayWidth) {
-  const minMin = dayWidth ? ((BAR_MIN_PX + BAR_GAP_PX) / dayWidth) * 1440 : 0
-  const sorted = [...timed].sort((a, b) => (a.start ?? 0) - (b.start ?? 0))
-  const laneEnds = []
-  const out = []
-  for (const t of sorted) {
-    const s = t.start ?? 0
-    const trueE = t.end != null && t.end > s ? t.end : s + 30
-    const e = Math.max(trueE, s + minMin) // effective end = accounts for the min render width
-    let lane = laneEnds.findIndex((end) => end <= s)
-    if (lane === -1) { lane = laneEnds.length; laneEnds.push(e) }
-    else laneEnds[lane] = e
-    out.push({ task: t, lane })
-  }
-  return { rows: out, laneCount: Math.max(1, laneEnds.length) }
-}
 
 export default function Timeline({ store, now, onEdit, actions }) {
   const today = todayKey()
@@ -44,6 +23,9 @@ export default function Timeline({ store, now, onEdit, actions }) {
 
   const onToggle = actions?.complete || store.toggleTask
   const onDelete = actions?.remove || store.deleteTask
+  const onUncomplete = actions?.uncomplete || store.toggleTask
+  const onBump = actions?.bump
+  const calm = !!store.settings.reduceMotion
 
   const days = useMemo(() => {
     const base = startOfDay(now)
@@ -126,9 +108,12 @@ export default function Timeline({ store, now, onEdit, actions }) {
                 nowMin={nowMin}
                 tintEnabled={tintEnabled}
                 variant={variant}
+                calm={calm}
                 onEdit={onEdit}
                 onToggle={onToggle}
                 onDelete={onDelete}
+                onUncomplete={onUncomplete}
+                onBump={onBump}
               />
             ))}
           </div>
@@ -140,13 +125,9 @@ export default function Timeline({ store, now, onEdit, actions }) {
   )
 }
 
-function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, variant, onEdit, onToggle, onDelete }) {
+function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, variant, calm, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
   const key = dateKey(date)
-  const active = store.tasks.filter((t) => !t.done && displayDateKey(t, today) === key)
-  const completed = store.tasks.filter((t) => t.done && t.date === key).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
-  const overdue = active.filter((t) => isOverdue(t, today)).sort((a, b) => overdueDays(b, today) - overdueDays(a, today))
-  const timed = active.filter((t) => !isOverdue(t, today) && t.start != null)
-  const anytime = active.filter((t) => !isOverdue(t, today) && t.start == null)
+  const { overdue, timed, anytime, completed } = dayBands(store.tasks, key, today)
   const { rows, laneCount } = packLanes(timed, dayWidth)
 
   return (
@@ -163,11 +144,19 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
 
       <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
         <div className="flex flex-col gap-3">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {overdue.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
-            ))}
-          </AnimatePresence>
+          <OverduePile
+            tasks={overdue}
+            dayKey={key}
+            today={today}
+            nowMin={nowMin}
+            tintEnabled={tintEnabled}
+            variant={variant}
+            calm={calm}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onBump={onBump}
+          />
 
           {timed.length > 0 && (
             <div className="relative" style={{ height: laneCount * 56 - 12 }}>
@@ -186,15 +175,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
             ))}
           </AnimatePresence>
 
-          {completed.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 rounded-[var(--radius-card)] px-4 py-2.5" style={{ background: 'var(--completed-bg)', opacity: 0.7 }}>
-              <button aria-label={`Uncomplete ${t.title}`} onClick={() => store.toggleTask(t.id)}
-                className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full" style={{ background: 'var(--success)', color: '#06352a' }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.2 4.2L19 7" /></svg>
-              </button>
-              <span className="flex-1 truncate text-[14px] font-medium line-through" style={{ color: 'var(--text-faint)' }}>{t.title}</span>
-            </div>
-          ))}
+          <CompletedSection tasks={completed} onUncomplete={onUncomplete} compact />
         </div>
       </div>
     </div>
