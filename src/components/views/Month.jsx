@@ -1,66 +1,161 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import TaskCard from '../TaskCard'
-import { addDays, dateKey, startOfDay, todayKey, keyToDate } from '../../state/time'
-import { bucketByDisplayDay, displayDateKey } from '../../state/rollover'
+import CompletedSection from '../CompletedSection'
+import Sticker from '../stickers/Sticker'
+import { pickWaiting } from '../stickers/art'
+import Icon from '../Icon'
+import { addDays, dateKey, startOfDay, todayKey, keyToDate, fracOf } from '../../state/time'
+import { dayBands } from '../../state/bands'
 
 const WD = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+// Month can't express time-of-day positionally in a 42-cell grid, so it
+// expresses it as SHAPE: every cell carries a tiny 24h strip with a tick at
+// each task's start. Same left→right time metaphor as the Daily view, scaled
+// down — you read "my Tuesdays are packed in the morning" at a glance.
+function MicroTimeline({ tasks, isToday, nowMin }) {
+  const timed = tasks.filter((t) => t.start != null)
+  if (!timed.length && !isToday) return <div style={{ height: 4 }} />
+  return (
+    <div className="relative w-full rounded-full" style={{ height: 4, background: 'var(--grid-line)' }}>
+      {timed.map((t) => (
+        <span
+          key={t.id}
+          className="absolute top-0 rounded-full"
+          style={{
+            left: `${fracOf(t.start) * 100}%`,
+            width: 3,
+            height: 4,
+            background: t.done ? 'var(--success)' : 'var(--task-blue-bg)',
+          }}
+        />
+      ))}
+      {isToday && (
+        <span
+          className="absolute -top-0.5"
+          style={{ left: `${fracOf(nowMin) * 100}%`, width: 1.5, height: 7, background: 'var(--now-line)' }}
+        />
+      )}
+    </div>
+  )
+}
 
 export default function Month({ store, now, onEdit, actions }) {
   const today = todayKey()
   const variant = store.settings.taskStyle || 'filled'
+  const tintEnabled = store.settings.overdueTint !== false
+  const calm = !!store.settings.reduceMotion
+  const nowMin = now.getHours() * 60 + now.getMinutes()
   const [selected, setSelected] = useState(today)
+  const [offset, setOffset] = useState(0) // months from the current one
 
-  const first = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1))
-  const lead = first.getDay()
-  const gridStart = addDays(first, -lead)
-  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i))
+  const onToggle = actions?.complete || store.toggleTask
+  const onDelete = actions?.remove || store.deleteTask
+  const onUncomplete = actions?.uncomplete || store.toggleTask
+
+  const view = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+  const first = startOfDay(view)
+  const gridStart = addDays(first, -first.getDay())
+  const cells = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)), [gridStart.getTime()])
   const keys = cells.map(dateKey)
-  const buckets = useMemo(() => bucketByDisplayDay(store.tasks, keys, today), [store.tasks, keys.join(), today])
 
-  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' })
-  const selectedTasks = buckets[selected] || []
+  const byDay = useMemo(() => {
+    const out = {}
+    for (const k of keys) out[k] = dayBands(store.tasks, k, today)
+    return out
+  }, [store.tasks, keys.join(), today])
+
+  const monthName = view.toLocaleString('default', { month: 'long', year: 'numeric' })
+  const sel = byDay[selected] || dayBands(store.tasks, selected, today)
+  const selActive = [...sel.overdue, ...sel.timed, ...sel.anytime]
+  const { Art, rest } = pickWaiting(selected)
 
   return (
-    <div className="mx-auto h-full max-w-5xl px-3 pt-6 sm:px-8">
-      <h2 className="font-display mb-4 text-center text-2xl" style={{ color: 'var(--text)' }}>{monthName}</h2>
+    <div className="mx-auto h-full max-w-5xl px-3 pt-4 sm:px-8">
+      <div className="mb-3 flex items-center justify-center gap-3">
+        <NavBtn onClick={() => setOffset((o) => o - 1)} label="Previous month">
+          <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+        </NavBtn>
+        <button
+          onClick={() => { setOffset(0); setSelected(today) }}
+          className="font-display text-2xl"
+          style={{ color: 'var(--text)' }}
+        >
+          {monthName}
+        </button>
+        <NavBtn onClick={() => setOffset((o) => o + 1)} label="Next month">
+          <Icon name="chevronRight" size={16} />
+        </NavBtn>
+      </div>
 
       <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {WD.map((d, i) => (
           <div key={i} className="pb-1 text-center text-[11px] font-bold" style={{ color: 'var(--text-faint)' }}>{d}</div>
         ))}
+
         {cells.map((d, i) => {
           const k = keys[i]
-          const inMonth = d.getMonth() === now.getMonth()
+          const inMonth = d.getMonth() === view.getMonth()
           const isToday = k === today
           const isSel = k === selected
-          const items = buckets[k]
-          const overdue = items.some((t) => displayDateKey(t, today) === today && t.date < today && k === today)
+          const bands = byDay[k]
+          const items = [...bands.overdue, ...bands.timed, ...bands.anytime]
           return (
             <button
               key={k}
               onClick={() => setSelected(k)}
-              className="relative flex aspect-square flex-col rounded-2xl p-1 text-left transition-colors sm:p-1.5"
+              className="relative flex aspect-square flex-col gap-0.5 rounded-2xl p-1 text-left transition-colors sm:p-1.5"
               style={{
                 background: isSel ? 'var(--bg-soft)' : 'transparent',
                 outline: isToday ? '2px solid var(--coral-strong)' : 'none',
                 opacity: inMonth ? 1 : 0.35,
               }}
             >
-              <span className="text-[11px] font-bold sm:text-sm" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-soft)' }}>{d.getDate()}</span>
+              {isSel && (
+                <motion.span
+                  layoutId="month-sel"
+                  className="absolute inset-0 -z-10 rounded-2xl"
+                  style={{ background: 'var(--bg-soft)' }}
+                  transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                />
+              )}
+              <span className="text-[11px] font-bold sm:text-sm" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-soft)' }}>
+                {d.getDate()}
+              </span>
 
               {/* desktop: mini bars; mobile: density dots */}
               <div className="mt-auto hidden flex-col gap-0.5 sm:flex">
-                {items.slice(0, 3).map((t) => (
-                  <span key={t.id} className="truncate rounded px-1 text-[9px] font-semibold" style={{ background: t.date < today && !t.done ? 'var(--task-coral-bg)' : 'var(--task-blue-bg)', color: '#fff' }}>{t.title}</span>
-                ))}
-                {items.length > 3 && <span className="px-1 text-[9px]" style={{ color: 'var(--text-faint)' }}>+{items.length - 3}</span>}
+                {items.slice(0, 2).map((t) => {
+                  const od = bands.overdue.includes(t)
+                  return (
+                    <span
+                      key={t.id}
+                      className="truncate rounded px-1 text-[9px] font-semibold"
+                      style={{
+                        background: od ? 'var(--task-coral-bg)' : 'var(--task-blue-bg)',
+                        color: od ? 'var(--task-coral-text)' : 'var(--task-blue-text)',
+                      }}
+                    >
+                      {t.title}
+                    </span>
+                  )
+                })}
+                {items.length > 2 && (
+                  <span className="px-1 text-[9px]" style={{ color: 'var(--text-faint)' }}>+{items.length - 2}</span>
+                )}
               </div>
               <div className="mt-auto flex gap-0.5 sm:hidden">
                 {items.slice(0, 3).map((t) => (
-                  <span key={t.id} className="h-1.5 w-1.5 rounded-full" style={{ background: t.date < today && !t.done ? 'var(--task-coral-bg)' : 'var(--task-blue-bg)' }} />
+                  <span
+                    key={t.id}
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: bands.overdue.includes(t) ? 'var(--task-coral-bg)' : 'var(--task-blue-bg)' }}
+                  />
                 ))}
               </div>
+
+              <MicroTimeline tasks={items} isToday={isToday} nowMin={nowMin} />
             </button>
           )
         })}
@@ -73,13 +168,44 @@ export default function Month({ store, now, onEdit, actions }) {
         </h3>
         <div className="flex flex-col gap-3">
           <AnimatePresence mode="popLayout" initial={false}>
-            {selectedTasks.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} variant={variant} onToggle={actions?.complete || store.toggleTask} onDelete={actions?.remove || store.deleteTask} onEdit={onEdit} />
+            {selActive.map((t) => (
+              <TaskCard
+                key={t.id}
+                task={t}
+                today={today}
+                nowMin={nowMin}
+                tintEnabled={tintEnabled}
+                variant={variant}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+              />
             ))}
           </AnimatePresence>
-          {selectedTasks.length === 0 && <p className="text-sm" style={{ color: 'var(--text-faint)' }}>Nothing scheduled.</p>}
+
+          {selActive.length === 0 && (
+            <div className="flex flex-col items-center gap-1 py-6">
+              <Sticker Art={Art} rest={rest} size={76} calm={calm} />
+              <span className="text-sm" style={{ color: 'var(--text-faint)' }}>nothing scheduled — enjoy it</span>
+            </div>
+          )}
+
+          <CompletedSection tasks={sel.completed} onUncomplete={onUncomplete} />
         </div>
       </div>
     </div>
+  )
+}
+
+function NavBtn({ onClick, label, children }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="grid h-8 w-8 place-items-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+      style={{ color: 'var(--text-soft)' }}
+    >
+      {children}
+    </button>
   )
 }
