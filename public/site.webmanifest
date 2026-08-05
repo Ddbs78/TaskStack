@@ -1,0 +1,14 @@
+{
+  "name": "StackTask",
+  "short_name": "StackTask",
+  "description": "A timeline task manager that shows you what needs doing right now.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1e",
+  "theme_color": "#1a1a1e",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}

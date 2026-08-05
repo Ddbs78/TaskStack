@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 280" width="230" height="280">
+  <g transform="translate(150 66) scale(0.72) rotate(6)">
+    <path d="M0 -52 L52 -26 L0 0 L-52 -26 Z" fill="#f4845f" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M-52 -26 L0 0 L0 52 L-52 26 Z" fill="#f4845f" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M52 -26 L52 26 L0 52 L0 0 Z" fill="#f4845f" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(68 132) scale(0.8) rotate(-7)">
+    <path d="M0 -52 L52 -26 L0 0 L-52 -26 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M-52 -26 L0 0 L0 52 L-52 26 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M52 -26 L52 26 L0 52 L0 0 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(108 206) scale(0.74) rotate(5)">
+    <path d="M0 -52 L52 -26 L0 0 L-52 -26 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M-52 -26 L0 0 L0 52 L-52 26 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M52 -26 L52 26 L0 52 L0 0 Z" fill="#3b82f6" stroke="#14141a" stroke-width="10" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStore } from './state/store'
 import { useNow, useMidnightTick } from './state/time'
@@ -10,6 +10,9 @@ import AssistantPanel from './components/AssistantPanel'
 import SettingsModal from './components/SettingsModal'
 import TaskEditor from './components/TaskEditor'
 import UndoToast from './components/UndoToast'
+import BrandMark from './components/BrandMark'
+import Celebration from './components/Celebration'
+import RightNow from './components/RightNow'
 import Icon from './components/Icon'
 import { isOverdue } from './state/rollover'
 import { todayKey, dateKey, addDays } from './state/time'
@@ -23,6 +26,12 @@ export default function App() {
   const [showAssistant, setShowAssistant] = useState(false)
   const [editing, setEditing] = useState(null)
   const [toast, setToast] = useState(null)
+  const [celebration, setCelebration] = useState(null)
+  const [showRightNow, setShowRightNow] = useState(false)
+  const [logoTumble, setLogoTumble] = useState(false)
+  const [logoLoose, setLogoLoose] = useState(false)
+  const tapRef = useRef(0)
+  const tapTimer = useRef(null)
 
   useMidnightTick(() => setBump((b) => b + 1))
 
@@ -31,7 +40,15 @@ export default function App() {
   // Completion / deletion go through here so they can raise an Undo toast (§1.15)
   const actions = {
     complete: (id) => {
+      const t = store.tasks.find((x) => x.id === id)
+      // was this the last thing overdue? checked BEFORE the toggle so the
+      // inbox-zero moment stays rare and genuinely earned.
+      const overdueLeft = store.tasks.filter(
+        (x) => x.id !== id && !x.done && isOverdue(x, todayKey())
+      ).length
+      const wasOverdue = t && isOverdue(t, todayKey())
       store.toggleTask(id)
+      setCelebration({ id: Date.now(), type: wasOverdue && overdueLeft === 0 ? 'zero' : 'one' })
       showToast('Task completed', () => store.toggleTask(id))
     },
     remove: (id) => {
@@ -66,11 +83,34 @@ export default function App() {
     <div className="flex h-full flex-col" key={bump}>
       {/* top bar */}
       <header className="flex shrink-0 items-center justify-between px-4 pt-[max(14px,env(safe-area-inset-top))] sm:px-8">
-        <div className="flex items-baseline gap-2">
+        {/* items-center, not items-baseline — baseline alignment misbehaves with SVG */}
+        <button
+          className="flex items-center gap-2"
+          onMouseEnter={() => setLogoTumble(true)}
+          onMouseLeave={() => setLogoTumble(false)}
+          onClick={() => {
+            // easter egg: keep tapping and the cubes break loose
+            const n = tapRef.current + 1
+            tapRef.current = n
+            clearTimeout(tapTimer.current)
+            tapTimer.current = setTimeout(() => { tapRef.current = 0 }, 900)
+            if (n >= 5) { tapRef.current = 0; setLogoLoose(true); setTimeout(() => setLogoLoose(false), 2600) }
+          }}
+          aria-label="StackTask"
+        >
+          <BrandMark size={30} tumbling={logoTumble || logoLoose} />
           <span className="font-display text-2xl font-semibold tracking-[-0.02em]" style={{ color: 'var(--text)' }}>StackTask</span>
-          <span className="hidden text-xs sm:inline" style={{ color: 'var(--text-faint)' }}>what needs doing</span>
-        </div>
+          <span className="hidden self-end pb-1 text-xs sm:inline" style={{ color: 'var(--text-faint)' }}>what needs doing</span>
+        </button>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowRightNow(true)}
+            className="mr-1 rounded-full px-3 py-2 text-[13px] font-bold transition-colors"
+            style={{ background: 'var(--surface-2)', color: 'var(--text)' }}
+            title="What should I do right now?"
+          >
+            right now
+          </button>
           <button
             onClick={() => setShowAssistant(true)}
             className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
@@ -111,6 +151,21 @@ export default function App() {
         toast={toast}
         onUndo={(t) => { t.undo?.(); setToast(null) }}
         onDismiss={(t) => setToast((cur) => (cur && cur.id === t.id ? null : cur))}
+      />
+
+      <Celebration
+        event={celebration}
+        calm={!!store.settings.reduceMotion}
+        onDone={() => setCelebration(null)}
+      />
+
+      <RightNow
+        open={showRightNow}
+        onClose={() => setShowRightNow(false)}
+        tasks={store.tasks}
+        today={todayKey()}
+        nowMin={now.getHours() * 60 + now.getMinutes()}
+        onComplete={actions.complete}
       />
 
       <InputBar

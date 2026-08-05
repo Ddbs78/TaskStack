@@ -7,7 +7,7 @@ const SUGGESTIONS = ["What's overdue?", 'What do I have today?', "Move today's t
 
 export default function AssistantPanel({ open, onClose, store }) {
   const [log, setLog] = useState([
-    { role: 'flow', text: 'Hey — ask me what’s coming up, or tell me to move things around.' },
+    { role: 'st', text: 'Hey — ask me what’s coming up, or tell me to move things around.' },
   ])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -31,7 +31,7 @@ export default function AssistantPanel({ open, onClose, store }) {
       else if (a.type === 'completeMany') a.ids.forEach((id) => store.toggleTask(id))
       else if (a.type === 'deleteMany') a.ids.forEach((id) => store.deleteTask(id))
     }
-    setLog((l) => [...l, { role: 'flow', text: reply }])
+    setLog((l) => [...l, { role: 'st', text: reply }])
     setBusy(false)
   }
 

@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ---------------------------------------------------------------------------
-   Flow — design tokens
+   StackTask — design tokens
    Warm, organic, "alive" aesthetic. Light + dark via [data-theme].
 --------------------------------------------------------------------------- */
 :root {
@@ -49,6 +49,9 @@
   --task-coral-tint-border: rgba(244, 132, 95, 0.34);
   --completed-bg: rgba(255, 255, 255, 0.045);
   --shadow-card: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
+  /* logo outline — flips per theme so the mark keeps its inked, hand-drawn
+     character instead of vanishing into a dark background */
+  --brand-ink: #f5f5f3;
 }
 
 [data-theme='light'] {
@@ -77,6 +80,7 @@
   --task-coral-tint-border: rgba(244, 132, 95, 0.42);
   --completed-bg: rgba(0, 0, 0, 0.035);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --brand-ink: #14141a;
 }
 
 * { box-sizing: border-box; }

@@ -88,7 +88,7 @@ export async function ask(message, tasks, settings) {
       tools: [ACTION_TOOL],
       tool_choice: { type: 'tool', name: 'apply_actions' },
       system:
-        `You are Flow, a fast, warm task assistant. Today is ${today}. ` +
+        `You are StackTask, a fast, warm task assistant. Today is ${today}. ` +
         `Times are minutes-from-midnight (e.g. 3pm = 900). ` +
         `Use the user's current tasks (JSON) to resolve references, then call apply_actions. ` +
         `Keep replies to one short sentence.`,

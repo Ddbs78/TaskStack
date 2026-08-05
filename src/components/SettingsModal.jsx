@@ -104,7 +104,7 @@ export default function SettingsModal({ open, onClose, store }) {
               <Row label="Home-screen widget" hint="Coming soon"><Badge>Soon</Badge></Row>
             </Section>
 
-            <p className="mt-2 text-center text-[11px]" style={{ color: 'var(--text-faint)' }}>Flow · everything stays on this device</p>
+            <p className="mt-2 text-center text-[11px]" style={{ color: 'var(--text-faint)' }}>StackTask · everything stays on this device</p>
           </motion.div>
         </>
       )}
