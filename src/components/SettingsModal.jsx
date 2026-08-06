@@ -60,8 +60,16 @@ export default function SettingsModal({ open, onClose, store }) {
                   onChange={(v) => setSettings({ taskStyle: v })}
                 />
               </Row>
-              <Row label="Elapsed tint" hint="Fade tasks to coral as time passes">
-                <Toggle on={settings.overdueTint !== false} onChange={(v) => setSettings({ overdueTint: v })} />
+              <Row label="Elapsed time" hint="How today's tasks show time passing">
+                <Segmented
+                  value={settings.elapsedStyle || (settings.overdueTint === false ? 'off' : 'tint')}
+                  options={[
+                    { id: 'off', label: 'Off' },
+                    { id: 'tint', label: 'Tint' },
+                    { id: 'hatch', label: 'Hatch' },
+                  ]}
+                  onChange={(v) => setSettings({ elapsedStyle: v, overdueTint: v !== 'off' })}
+                />
               </Row>
               <Row label="Reduce motion" hint="Calmer animations">
                 <Toggle on={settings.reduceMotion} onChange={(v) => setSettings({ reduceMotion: v })} />

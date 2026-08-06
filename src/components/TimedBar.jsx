@@ -52,7 +52,8 @@ const MIN_PX = 42         // min render width: fits the chevron + grabbable edge
 // (measured): circle+chevron → circle+clipped title+chevron → circle+full title.
 // Ends are drag-resizable (cursor swaps to ⟷ on the border; 15-min snap; signed
 // delta pill). Small bars open a task-tinted peek blob on hover.
-const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize }, ref) {
+const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize, elapsedStyle = 'tint' }, ref) {
+  const hatch = elapsedStyle === 'hatch'
   const start = task.start ?? 0
   const end = task.end != null && task.end > start ? task.end : start + 30
   const left = fracOf(start) * 100
@@ -175,7 +176,15 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
         {onResize && renderEdge('end')}
 
         {elapsed > 0 && !passed && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-0" style={{ width: `${elapsed * 100}%`, background: fillBg }} />
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-0"
+            style={
+              hatch
+                ? { width: `${elapsed * 100}%`,
+                    backgroundImage: 'repeating-linear-gradient(115deg, color-mix(in srgb, currentColor 32%, transparent) 0 2px, transparent 2px 7px)' }
+                : { width: `${elapsed * 100}%`, background: fillBg }
+            }
+          />
         )}
 
         {showCircle && (

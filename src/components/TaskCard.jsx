@@ -17,9 +17,10 @@ const variants = {
 }
 
 const TaskCard = forwardRef(function TaskCard(
-  { task, onToggle, onDelete, onEdit, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true },
+  { task, onToggle, onDelete, onEdit, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true, elapsedStyle = 'tint' },
   ref
 ) {
+  const hatch = elapsedStyle === 'hatch'
   const od = overdueDays(task, today)
   const overdue = od > 0
   const tinted = variant === 'tinted'
@@ -123,9 +124,22 @@ const TaskCard = forwardRef(function TaskCard(
           transition: 'transform 0.45s var(--ease-spring)',
         }}
       >
-        {/* elapsed (overdue) two-tone fill on the left of the now-line */}
+        {/* elapsed portion, left of the now-line. 'hatch' draws a hand-drawn
+            diagonal rule instead of a solid block — reads as marked-off rather
+            than half-rendered. */}
         {elapsed > 0 && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-0" style={{ width: `${elapsed * 100}%`, background: fillBg }} />
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 z-0"
+            style={
+              hatch
+                ? {
+                    width: `${elapsed * 100}%`,
+                    backgroundImage:
+                      'repeating-linear-gradient(115deg, color-mix(in srgb, var(--task-coral-text) 30%, transparent) 0 2px, transparent 2px 7px)',
+                  }
+                : { width: `${elapsed * 100}%`, background: fillBg }
+            }
+          />
         )}
 
         {/* checkbox */}

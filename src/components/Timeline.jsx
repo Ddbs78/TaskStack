@@ -15,7 +15,8 @@ export default function Timeline({ store, now, onEdit, actions }) {
   const today = todayKey()
   const mobile = useIsMobile()
   const variant = store.settings.taskStyle || 'filled'
-  const tintEnabled = store.settings.overdueTint !== false
+  const elapsedStyle = store.settings.elapsedStyle || (store.settings.overdueTint === false ? 'off' : 'tint')
+  const tintEnabled = elapsedStyle !== 'off'
   const scrollerRef = useRef(null)
   const nowBarRef = useRef(null)
   const nowTravelRef = useRef(null)
@@ -116,6 +117,7 @@ export default function Timeline({ store, now, onEdit, actions }) {
                 today={today}
                 nowMin={nowMin}
                 tintEnabled={tintEnabled}
+                elapsedStyle={elapsedStyle}
                 variant={variant}
                 calm={calm}
                 onEdit={onEdit}
@@ -134,7 +136,7 @@ export default function Timeline({ store, now, onEdit, actions }) {
   )
 }
 
-function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, variant, calm, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
+function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, elapsedStyle, variant, calm, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
   const key = dateKey(date)
   const { overdue, timed, anytime, completed } = dayBands(store.tasks, key, today)
   const { rows, laneCount } = packLanes(timed, dayWidth)
@@ -159,6 +161,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
             today={today}
             nowMin={nowMin}
             tintEnabled={tintEnabled}
+            elapsedStyle={elapsedStyle}
             variant={variant}
             calm={calm}
             onToggle={onToggle}
@@ -171,7 +174,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
             <div className="relative" style={{ height: laneCount * 56 - 12 }}>
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
-                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled}
+                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle}
                     onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
                 ))}
               </AnimatePresence>
@@ -180,7 +183,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
 
           <AnimatePresence mode="popLayout" initial={false}>
             {anytime.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </AnimatePresence>
 

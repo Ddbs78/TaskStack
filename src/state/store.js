@@ -31,7 +31,8 @@ function loadTasks() {
 export const DEFAULT_SETTINGS = {
   theme: 'dark',
   taskStyle: 'filled', // filled | tinted
-  overdueTint: true, // gradual blue→coral fill as the now-line passes; else stay blue until fully past
+  overdueTint: true, // legacy on/off flag, kept so existing saved settings keep working
+  elapsedStyle: 'tint', // off | tint | hatch — how elapsed time reads on today's tasks
   notifications: false,
   reduceMotion: false,
   aiKey: '',

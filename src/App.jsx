@@ -48,8 +48,17 @@ export default function App() {
         (x) => x.id !== id && !x.done && isOverdue(x, todayKey())
       ).length
       const wasOverdue = t && isOverdue(t, todayKey())
+      // live counts for the toast: what's done today vs what's still outstanding
+      const today = todayKey()
+      const doneToday = store.tasks.filter((x) => x.done && x.date === today).length + 1
+      const left = store.tasks.filter((x) => x.id !== id && !x.done).length
       store.toggleTask(id)
-      setCelebration({ id: Date.now(), type: wasOverdue && overdueLeft === 0 ? 'zero' : 'one' })
+      setCelebration({
+        id: Date.now(),
+        type: wasOverdue && overdueLeft === 0 ? 'zero' : 'one',
+        done: doneToday,
+        left,
+      })
       showToast('Task completed', () => store.toggleTask(id))
     },
     remove: (id) => {

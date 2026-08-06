@@ -151,8 +151,14 @@ export const WAITING = [
   { Art: Ghost, rest: 5, label: 'gently haunting' },
 ]
 
+// A per-session salt so the cast actually rotates on reload/reopen. Hashing the
+// day key alone meant a given day ALWAYS drew the same character — stable, but
+// in practice you only ever saw one of them. The salt is fixed for the life of
+// the tab, so a character still can't shuffle out from under you mid-session.
+const SESSION_SALT = Math.floor(Math.random() * WAITING.length)
+
 export function pickWaiting(seed = '') {
   let h = 0
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return WAITING[h % WAITING.length]
+  return WAITING[(h + SESSION_SALT) % WAITING.length]
 }

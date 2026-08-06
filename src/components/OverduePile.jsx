@@ -19,6 +19,7 @@ export default function OverduePile({
   today,
   nowMin,
   tintEnabled,
+  elapsedStyle = 'tint',
   variant,
   calm = false,
   onToggle,
@@ -43,6 +44,7 @@ export default function OverduePile({
             today={today}
             nowMin={nowMin}
             tintEnabled={tintEnabled}
+            elapsedStyle={elapsedStyle}
             variant={variant}
             onToggle={onToggle}
             onDelete={onDelete}

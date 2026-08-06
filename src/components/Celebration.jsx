@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { PartyBean, HappyStar } from './stickers/art'
 
@@ -6,82 +6,216 @@ import { PartyBean, HappyStar } from './stickers/art'
 //
 // The app has to reward finishing more loudly than it punishes falling behind —
 // otherwise debt is the only thing on screen with visual weight, which is the
-// exact failure mode the capped stack exists to fix. So completion gets its own
-// crafted moment, and clearing the LAST overdue task gets a rare one.
-const CONFETTI = ['#B9A7F0', '#7FD8A8', '#F5D06B', '#8FC7F5', '#F58FA8', '#F4845F']
+// exact failure mode the capped stack exists to fix.
+//
+// Two tiers:
+//   'one'  — ~1.2s corner toast, never blocks, shows live remaining count
+//   'zero' — the rare inbox-zero cinematic (impact-frame language)
+//
+// VIDEO SWAP: when breakthrough.mp4 lands in src/assets/cinematic/, drop it into
+// <ZeroCinematic> in place of the <ImpactFrame> layer — the dim/skip/restore
+// choreography around it stays exactly the same.
+const CONFETTI = ['#B9A7F0', '#7FD8A8', '#F5D06B', '#8FC7F5', '#F58FA8', '#e58a67']
+
+function SkipButton({ onSkip, delay = 0.4 }) {
+  return (
+    <motion.button
+      onClick={onSkip}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay, duration: 0.3 }}
+      className="pointer-events-auto absolute right-4 top-4 z-10 rounded-full px-3 py-1.5 text-[11px] font-bold backdrop-blur"
+      style={{
+        background: 'rgba(255,255,255,.14)',
+        border: '1px solid rgba(255,255,255,.3)',
+        color: '#fff',
+      }}
+    >
+      skip ›
+    </motion.button>
+  )
+}
+
+// ---- inbox zero: anime impact frame -----------------------------------------
+function ZeroCinematic({ onSkip, still }) {
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-0 z-[90] overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      {/* the world dims — recedes, never a hard cut */}
+      <motion.div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(circle at 50% 52%, rgba(20,18,14,.86), rgba(8,8,10,.96))' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      />
+
+      {!still && (
+        <>
+          {/* conic speed lines burst outward */}
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              background:
+                'repeating-conic-gradient(from 0deg at 50% 52%, rgba(255,248,238,.22) 0deg 1.4deg, transparent 1.4deg 7deg)',
+              maskImage: 'radial-gradient(circle at 50% 52%, transparent 8%, #000 42%)',
+              WebkitMaskImage: 'radial-gradient(circle at 50% 52%, transparent 8%, #000 42%)',
+            }}
+            initial={{ opacity: 0, scale: 0.35, rotate: -6 }}
+            animate={{ opacity: [0, 0.95, 0.5, 0], scale: [0.35, 1.5, 1.9], rotate: 6 }}
+            transition={{ duration: 1.9, delay: 0.35, times: [0, 0.25, 0.6, 1], ease: 'easeOut' }}
+          />
+          {/* golden core ignites */}
+          <motion.div
+            className="absolute left-1/2 top-[52%] h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ background: '#F5D06B', filter: 'blur(6px)' }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: [0, 1.35, 0.9, 3.4], opacity: [0, 1, 0.9, 0] }}
+            transition={{ duration: 1.7, delay: 0.45, times: [0, 0.18, 0.32, 1], ease: 'easeOut' }}
+          />
+          {/* diagonal light sweep */}
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(105deg, transparent 32%, rgba(255,248,238,.34) 48%, transparent 62%)',
+            }}
+            initial={{ x: '-60%', opacity: 0 }}
+            animate={{ x: '60%', opacity: [0, 1, 0] }}
+            transition={{ duration: 1.1, delay: 0.85, ease: 'easeInOut' }}
+          />
+          {/* confetti */}
+          {CONFETTI.map((c, i) => {
+            const a = (i / CONFETTI.length) * Math.PI * 2
+            return (
+              <motion.span
+                key={i}
+                className="absolute left-1/2 top-[52%] rounded-[2px]"
+                style={{ width: 11, height: 11, background: c }}
+                initial={{ x: 0, y: 0, opacity: 0, rotate: 0 }}
+                animate={{
+                  x: Math.cos(a) * 260,
+                  y: Math.sin(a) * 200 + 150,
+                  opacity: [0, 1, 1, 0],
+                  rotate: 260 + i * 44,
+                }}
+                transition={{ duration: 2.1, delay: 0.9 + i * 0.045, ease: [0.15, 0.6, 0.4, 1] }}
+              />
+            )
+          })}
+        </>
+      )}
+
+      {/* the payoff */}
+      <motion.div
+        className="absolute inset-0 flex flex-col items-center justify-center"
+        initial={still ? { opacity: 0 } : { scale: 0.35, opacity: 0, rotate: -7 }}
+        animate={
+          still
+            ? { opacity: 1 }
+            : { scale: [0.35, 1.16, 0.97, 1], opacity: 1, rotate: [-7, 2, -1, 0] }
+        }
+        transition={
+          still
+            ? { duration: 0.3, delay: 0.3 }
+            : { duration: 0.85, delay: 1.0, times: [0, 0.34, 0.62, 1], ease: [0.2, 1.4, 0.4, 1] }
+        }
+      >
+        <div className="mb-2">
+          <HappyStar size={120} />
+        </div>
+        <div
+          className="font-display text-[clamp(34px,7vw,74px)] font-extrabold leading-none"
+          style={{
+            color: '#fff',
+            WebkitTextStroke: '5px #14141a',
+            paintOrder: 'stroke fill',
+            textShadow: '0 6px 30px rgba(245,208,107,.7)',
+            letterSpacing: '.5px',
+          }}
+        >
+          ALL CLEAR
+        </div>
+        <div
+          className="mt-2 text-[11px] font-bold"
+          style={{ color: '#ffe9a8', letterSpacing: '5px' }}
+        >
+          NOTHING LURKING
+        </div>
+      </motion.div>
+
+      <SkipButton onSkip={onSkip} />
+    </motion.div>
+  )
+}
+
+// ---- everyday completion: corner toast ---------------------------------------
+function OneToast({ done, left, onSkip, still }) {
+  return (
+    <motion.div
+      className="pointer-events-none fixed bottom-28 left-1/2 z-[90] -translate-x-1/2"
+      initial={still ? { opacity: 0 } : { opacity: 0, scale: 0.5, y: 16 }}
+      animate={
+        still
+          ? { opacity: 1 }
+          : { opacity: 1, scale: [0.5, 1.14, 0.97, 1], y: [16, -3, 0, 0] }
+      }
+      exit={{ opacity: 0, scale: 0.95, y: -8 }}
+      transition={still ? { duration: 0.18 } : { duration: 0.55, times: [0, 0.3, 0.55, 1], ease: [0.2, 1.5, 0.4, 1] }}
+    >
+      <div
+        className="flex items-center gap-3 rounded-2xl px-4 py-2.5 pl-2.5"
+        style={{
+          background: 'var(--surface-2)',
+          border: '2px solid var(--brand-ink)',
+          boxShadow: '3px 4px 0 rgba(0,0,0,.35)',
+        }}
+      >
+        <PartyBean size={46} />
+        <div>
+          <div className="font-display text-[15px] font-bold" style={{ color: 'var(--text)' }}>
+            {left > 0 ? `${done} down, ${left} to go` : `${done} down — that's the lot`}
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--text-soft)' }}>
+            {left > 0 ? 'keep rolling →' : 'the big one’s coming…'}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
 
 export default function Celebration({ event, onDone, calm = false }) {
   const prefersReduced = useReducedMotion()
   const still = calm || prefersReduced
   const zero = event?.type === 'zero'
+  const [skipped, setSkipped] = useState(false)
 
   useEffect(() => {
     if (!event) return
-    const t = setTimeout(onDone, zero ? 2200 : 1300)
+    setSkipped(false)
+    const t = setTimeout(onDone, zero ? (still ? 1400 : 3200) : 1350)
     return () => clearTimeout(t)
-  }, [event, zero, onDone])
+  }, [event, zero, still, onDone])
+
+  const skip = () => {
+    setSkipped(true)
+    onDone()
+  }
 
   return (
     <AnimatePresence>
-      {event && (
-        <motion.div
-          key={event.id}
-          className="pointer-events-none fixed inset-0 z-[80] grid place-items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-        >
-          <div className="relative grid place-items-center">
-            {/* confetti — only for the rare inbox-zero moment */}
-            {zero && !still && CONFETTI.map((c, i) => {
-              const angle = (i / CONFETTI.length) * Math.PI * 2
-              return (
-                <motion.span
-                  key={i}
-                  className="absolute rounded-[2px]"
-                  style={{ width: 9, height: 9, background: c }}
-                  initial={{ x: 0, y: 0, opacity: 0, rotate: 0 }}
-                  animate={{
-                    x: Math.cos(angle) * 130,
-                    y: Math.sin(angle) * 110 + 40,
-                    opacity: [0, 1, 1, 0],
-                    rotate: 220 + i * 40,
-                  }}
-                  transition={{ duration: 1.5, ease: [0.15, 0.6, 0.4, 1], delay: 0.06 + i * 0.03 }}
-                />
-              )
-            })}
-
-            <motion.div
-              initial={still ? { opacity: 0 } : { scale: 0, rotate: -22, opacity: 0 }}
-              animate={
-                still
-                  ? { opacity: 1 }
-                  : {
-                      scale: [0, 1.2, 0.94, 1],
-                      rotate: zero ? [-22, 8, -3, 0] : [-16, 6, 0],
-                      opacity: 1,
-                    }
-              }
-              exit={still ? { opacity: 0 } : { scale: 0.8, opacity: 0, y: -24 }}
-              transition={
-                still
-                  ? { duration: 0.2 }
-                  : { duration: zero ? 0.75 : 0.55, times: zero ? [0, 0.4, 0.7, 1] : [0, 0.5, 1], ease: 'easeOut' }
-              }
-              className="flex flex-col items-center gap-1"
-            >
-              {zero ? <HappyStar size={130} /> : <PartyBean size={104} />}
-              <span
-                className="font-display rounded-full px-3 py-1 text-[15px] font-semibold"
-                style={{ background: 'var(--surface-2)', color: 'var(--text)', border: '0.5px solid var(--hairline)' }}
-              >
-                {zero ? 'nothing lurking — nice' : 'one down'}
-              </span>
-            </motion.div>
-          </div>
-        </motion.div>
+      {event && !skipped && (
+        zero ? (
+          <ZeroCinematic key={event.id} onSkip={skip} still={still} />
+        ) : (
+          <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} />
+        )
       )}
     </AnimatePresence>
   )

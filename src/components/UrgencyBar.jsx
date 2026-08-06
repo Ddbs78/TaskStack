@@ -86,13 +86,18 @@ export default function UrgencyBar({ value, off = false, onChange, onToggleOff, 
             loop, so it stays correct even when the tab is backgrounded. */}
         {HEIGHTS.map((h, i) => {
           const filled = i < shown
+          // Ghost state: unfilled bars carry a faint tint of the colour they'd
+          // become plus a hairline, so the whole ramp reads as one clickable
+          // control instead of disappearing into the background.
+          const ghost = RAMP[i] + '2b'
           return (
             <span
               key={i}
               className="flex-1 rounded"
               style={{
                 height: h,
-                background: filled ? RAMP[i] : 'var(--surface-2)',
+                background: filled ? RAMP[i] : ghost,
+                border: filled ? '1px solid transparent' : `1px solid ${RAMP[i]}3d`,
                 transform: filled && !calm ? 'translateY(-1px)' : 'none',
                 transition: calm
                   ? 'background .12s linear'
