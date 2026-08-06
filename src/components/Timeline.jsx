@@ -183,7 +183,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
 
           <AnimatePresence mode="popLayout" initial={false}>
             {anytime.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
             ))}
           </AnimatePresence>
 

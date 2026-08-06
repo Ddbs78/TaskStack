@@ -2,8 +2,12 @@ import { forwardRef, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Icon from './Icon'
 import MarkerRule from './MarkerRule'
-import { fmtRange, relativeDayLabel, todayKey } from '../state/time'
+import { createPortal } from 'react-dom'
+import { fmtRange, fmtTime, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+const snap15 = (m) => Math.round(m / 15) * 15
 
 // Evaporating-pop exit + squeeze-in entrance.
 const variants = {
@@ -18,7 +22,7 @@ const variants = {
 }
 
 const TaskCard = forwardRef(function TaskCard(
-  { task, onToggle, onDelete, onEdit, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true, elapsedStyle = 'tint' },
+  { task, onToggle, onDelete, onEdit, onResize, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true, elapsedStyle = 'tint' },
   ref
 ) {
   const hatch = elapsedStyle === 'hatch'
@@ -84,6 +88,60 @@ const TaskCard = forwardRef(function TaskCard(
     startPt.current = null
   }
 
+  // ---- drag-to-schedule on full-day cards -----------------------------------
+  // A full-width anytime card already *is* the whole day, so narrowing it from
+  // either edge reads naturally as "this runs from here to here". Dragging
+  // converts the task to timed; from then on it renders as a TimedBar and uses
+  // that component's resize. Imperative during the drag, commit on release.
+  const boxRef = useRef(null)
+  const [tip, setTip] = useState(null)
+
+  const onEdgeDown = (edge) => (e) => {
+    if (!onResize || !task.anytime || e.button === 2) return
+    e.preventDefault(); e.stopPropagation()
+    cancelPress()
+    const box = boxRef.current
+    const r0 = box.getBoundingClientRect()
+    const perPx = 1440 / r0.width          // the card spans the full day column
+    const startX = e.clientX
+    let next = { start: 0, end: 1440 }
+    box.style.transition = 'none'
+    setTip({ x: e.clientX, y: r0.top - 10 })
+
+    const move = (ev) => {
+      const dx = (ev.clientX - startX) * perPx
+      if (edge === 'start') next.start = clamp(snap15(dx), 0, next.end - 15)
+      else next.end = clamp(1440 + snap15(dx), next.start + 15, 1440)
+      box.style.marginLeft = `${(next.start / 1440) * 100}%`
+      box.style.width = `${((next.end - next.start) / 1440) * 100}%`
+      setTip({ x: ev.clientX, y: r0.top - 10, label: `${fmtTime(next.start)} – ${fmtTime(next.end)}` })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      box.style.transition = ''
+      box.style.marginLeft = ''
+      box.style.width = ''
+      setTip(null)
+      if (next.start !== 0 || next.end !== 1440) {
+        onResize(task.id, { start: next.start, end: next.end, anytime: false })
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
+  const canSchedule = !!onResize && task.anytime
+  const renderEdge = (edge) => (
+    <div
+      key={`e-${edge}`}
+      onPointerDown={onEdgeDown(edge)}
+      className={`cursor-ew absolute inset-y-0 z-[3] ${edge === 'start' ? 'left-0' : 'right-0'}`}
+      style={{ width: 10, touchAction: 'none' }}
+      aria-label={`Schedule ${edge}`}
+    />
+  )
+
   return (
     <motion.div
       ref={ref}
@@ -107,6 +165,7 @@ const TaskCard = forwardRef(function TaskCard(
       )}
 
       <div
+        ref={boxRef}
         onContextMenu={(e) => { e.preventDefault(); onDelete(task.id) }}
         onDoubleClick={() => onDelete(task.id)}
         onPointerDown={beginPress}
@@ -122,6 +181,9 @@ const TaskCard = forwardRef(function TaskCard(
           transition: 'transform 0.45s var(--ease-spring)',
         }}
       >
+        {canSchedule && renderEdge('start')}
+        {canSchedule && renderEdge('end')}
+
         {/* elapsed portion, left of the now-line. 'hatch' draws a hand-drawn
             diagonal rule instead of a solid block — reads as marked-off rather
             than half-rendered. */}
@@ -175,6 +237,17 @@ const TaskCard = forwardRef(function TaskCard(
           <Icon name="repeat" size={15} stroke={2} className="opacity-70" />
         )}
       </div>
+
+      {tip && tip.label && createPortal(
+        <div
+          className="pointer-events-none fixed z-[70] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl px-3 text-[12px] font-semibold tabular-nums"
+          style={{ left: tip.x, top: tip.y, height: 26, lineHeight: '26px',
+                   background: 'var(--surface-2)', color: 'var(--text)', border: '2px solid var(--ink)' }}
+        >
+          {tip.label}
+        </div>,
+        document.body
+      )}
     </motion.div>
   )
 })
