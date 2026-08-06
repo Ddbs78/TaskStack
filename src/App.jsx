@@ -99,9 +99,7 @@ export default function App() {
           }}
           aria-label="StackTask"
         >
-          <BrandMark size={30} tumbling={logoTumble || logoLoose} />
-          <span className="font-display text-2xl font-semibold tracking-[-0.02em]" style={{ color: 'var(--text)' }}>StackTask</span>
-          <span className="hidden self-end pb-1 text-xs sm:inline" style={{ color: 'var(--text-faint)' }}>what needs doing</span>
+          <BrandMark variant="wordmark" height={42} tumbling={logoTumble || logoLoose} />
         </button>
         <div className="flex items-center gap-1">
           <button

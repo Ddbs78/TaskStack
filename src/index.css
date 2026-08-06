@@ -10,10 +10,10 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Nunito', system-ui, sans-serif;
 
   /* shared accents (per design-system §7.2) */
-  --coral: #f4845f;
-  --coral-strong: #e0683c;
-  --blue: #3b82f6;
-  --blue-strong: #2563eb;
+  --coral: #e58a67;        /* exact logo coral */
+  --coral-strong: #cf6a44;
+  --blue: #4b89f7;         /* exact logo blue  */
+  --blue-strong: #2f6fe0;
   --success: #34d399;
 
   /* corner radius (§7.4) */
@@ -37,16 +37,16 @@
   --hairline: #363638;
   --now-line: #ff453a;
   --now-glow: rgba(255, 69, 58, 0.28);
-  --task-blue-bg: #2f8bff;
-  --task-blue-text: #08203f;
-  --task-coral-bg: #f4845f;
-  --task-coral-text: #3d1c0f;
-  --task-blue-tint-bg: rgba(47, 139, 255, 0.15);
-  --task-blue-tint-text: #8fbcff;
-  --task-blue-tint-border: rgba(47, 139, 255, 0.34);
-  --task-coral-tint-bg: rgba(244, 132, 95, 0.15);
-  --task-coral-tint-text: #f3a886;
-  --task-coral-tint-border: rgba(244, 132, 95, 0.34);
+  --task-blue-bg: #4b89f7;
+  --task-blue-text: #07203f;
+  --task-coral-bg: #e58a67;
+  --task-coral-text: #3a1a0d;
+  --task-blue-tint-bg: rgba(75, 137, 247, 0.16);
+  --task-blue-tint-text: #9dbdff;
+  --task-blue-tint-border: rgba(75, 137, 247, 0.36);
+  --task-coral-tint-bg: rgba(229, 138, 103, 0.16);
+  --task-coral-tint-text: #f0a888;
+  --task-coral-tint-border: rgba(229, 138, 103, 0.36);
   --completed-bg: rgba(255, 255, 255, 0.045);
   --shadow-card: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
   /* logo outline — flips per theme so the mark keeps its inked, hand-drawn
@@ -68,16 +68,16 @@
   --hairline: #e5e5e3;
   --now-line: #ff3b30;
   --now-glow: rgba(255, 59, 48, 0.22);
-  --task-blue-bg: #3b82f6;
+  --task-blue-bg: #4b89f7;
   --task-blue-text: #ffffff;
-  --task-coral-bg: #f4845f;
+  --task-coral-bg: #e58a67;
   --task-coral-text: #ffffff;
-  --task-blue-tint-bg: rgba(59, 130, 246, 0.12);
-  --task-blue-tint-text: #1d63c4;
-  --task-blue-tint-border: rgba(59, 130, 246, 0.4);
-  --task-coral-tint-bg: rgba(244, 132, 95, 0.16);
-  --task-coral-tint-text: #c4502a;
-  --task-coral-tint-border: rgba(244, 132, 95, 0.42);
+  --task-blue-tint-bg: rgba(75, 137, 247, 0.13);
+  --task-blue-tint-text: #2a63c9;
+  --task-blue-tint-border: rgba(75, 137, 247, 0.42);
+  --task-coral-tint-bg: rgba(229, 138, 103, 0.17);
+  --task-coral-tint-text: #b5512c;
+  --task-coral-tint-border: rgba(229, 138, 103, 0.44);
   --completed-bg: rgba(0, 0, 0, 0.035);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
   --brand-ink: #14141a;
@@ -190,3 +190,6 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.05ms !important; }
 }
+
+/* the real brand artwork scales to the box it's given */
+.brandmark svg { height: 100%; width: auto; display: block; }
