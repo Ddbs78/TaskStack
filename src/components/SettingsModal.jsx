@@ -71,6 +71,13 @@ export default function SettingsModal({ open, onClose, store }) {
                   onChange={(v) => setSettings({ elapsedStyle: v, overdueTint: v !== 'off' })}
                 />
               </Row>
+              <Row label="Week segments" hint="Size to content, or six equal blocks">
+                <Segmented
+                  value={settings.weekAutoSize === false ? 'uniform' : 'auto'}
+                  options={[{ id: 'auto', label: 'Auto' }, { id: 'uniform', label: 'Equal' }]}
+                  onChange={(v) => setSettings({ weekAutoSize: v === 'auto' })}
+                />
+              </Row>
               <Row label="Reduce motion" hint="Calmer animations">
                 <Toggle on={settings.reduceMotion} onChange={(v) => setSettings({ reduceMotion: v })} />
               </Row>

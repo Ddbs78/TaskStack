@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS = {
   reduceMotion: false,
   aiKey: '',
   aiModel: 'claude-haiku-4-5',
+  weekAutoSize: true, // week segments size to their content; off = six equal segments
   recurringDefault: 'none', // none | daily | weekdays | weekly
 }
 

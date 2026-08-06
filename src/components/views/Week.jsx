@@ -1,180 +1,225 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Sticker from '../stickers/Sticker'
 import { pickWaiting } from '../stickers/art'
 import CompletedSection from '../CompletedSection'
 import Icon from '../Icon'
-import { addDays, dateKey, formatShort, startOfDay, todayKey, fracOf, fmtTime, fmtRange, useIsMobile } from '../../state/time'
-import { dayBands, packLanes, OVERDUE_VISIBLE } from '../../state/bands'
+import { addDays, dateKey, formatShort, startOfDay, todayKey, fmtTime, fmtRange, useIsMobile } from '../../state/time'
+import { dayBands, OVERDUE_VISIBLE } from '../../state/bands'
 import { elapsedFraction, elapsedToday } from '../../state/rollover'
 
-const DAY_H = 660 // px for a full 24h column
-const HOURS = [0, 3, 6, 9, 12, 15, 18, 21]
+// Six 4-hour segments cover the whole day with no scrolling. Tapping one opens
+// it to hourly detail while its neighbours fold up, so total height never
+// changes — an accordion, not a scroll.
+const SEG_MIN = 240
+const SEGS = [0, 1, 2, 3, 4, 5]
+const BODY_H = 400
 
-// Week = 7 vertical day columns, time running top→bottom.
-//
-// The Daily view runs time left→right; here it runs down. To keep the app's
-// signature object intact the now-line stays ONE continuous horizontal rule
-// across the whole grid — full strength inside today's column, ghosted either
-// side — rather than a mark that only exists inside one cell.
+// A segment's share of the body. Auto-size gives empty stretches (the 12a–6a
+// dead zone) a thin band and lets busy ones breathe; uniform splits evenly.
+function segmentHeights({ counts, expanded, autoSize }) {
+  let w
+  if (expanded != null) {
+    w = SEGS.map((i) => (i === expanded ? 5.2 : 0.62))
+  } else if (autoSize) {
+    w = SEGS.map((i) => 0.55 + Math.min(counts[i], 4) * 0.62)
+  } else {
+    w = SEGS.map(() => 1)
+  }
+  const sum = w.reduce((a, b) => a + b, 0)
+  return w.map((x) => (x / sum) * BODY_H)
+}
+
+// minute -> y, honouring whatever heights the segments currently have
+function makeScale(heights) {
+  const tops = []
+  let acc = 0
+  for (const h of heights) { tops.push(acc); acc += h }
+  return (min) => {
+    const i = Math.min(SEGS.length - 1, Math.max(0, Math.floor(min / SEG_MIN)))
+    return tops[i] + ((min - i * SEG_MIN) / SEG_MIN) * heights[i]
+  }
+}
+
 export default function Week({ store, now, onEdit, actions }) {
   const today = todayKey()
   const mobile = useIsMobile()
   const variant = store.settings.taskStyle || 'filled'
-  const tintEnabled = store.settings.overdueTint !== false
+  const elapsedStyle = store.settings.elapsedStyle || (store.settings.overdueTint === false ? 'off' : 'tint')
+  const tintEnabled = elapsedStyle !== 'off'
   const calm = !!store.settings.reduceMotion
+  const autoSize = store.settings.weekAutoSize !== false
   const nowMin = now.getHours() * 60 + now.getMinutes()
-  const bodyRef = useRef(null)
 
-  const [offset, setOffset] = useState(0) // weeks from the current one
+  const [offset, setOffset] = useState(0)
+  const [expanded, setExpanded] = useState(null)
+
   const onToggle = actions?.complete || store.toggleTask
   const onDelete = actions?.remove || store.deleteTask
   const onUncomplete = actions?.uncomplete || store.toggleTask
 
-  // below md we show a 3-day window rather than crushing 7 columns into ~40px
   const span = mobile ? 3 : 7
   const days = useMemo(() => {
     const base = addDays(startOfDay(now), offset * span)
     return Array.from({ length: span }, (_, i) => addDays(base, i))
   }, [now, offset, span])
   const keys = days.map(dateKey)
-
-  // bring the current hour into view on mount
-  useEffect(() => {
-    const el = bodyRef.current
-    if (el) el.scrollTop = Math.max(0, fracOf(nowMin) * DAY_H - el.clientHeight * 0.4)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const todayIdx = keys.indexOf(today)
 
+  const bands = useMemo(
+    () => keys.map((k) => dayBands(store.tasks, k, today)),
+    [store.tasks, keys.join(), today]
+  )
+
+  // busiest day drives segment sizing so all columns share one time scale
+  const counts = useMemo(() => {
+    const c = SEGS.map(() => 0)
+    bands.forEach((b) => b.timed.forEach((t) => {
+      const i = Math.min(5, Math.floor((t.start ?? 0) / SEG_MIN))
+      c[i] += 1
+    }))
+    return c
+  }, [bands])
+
+  const heights = segmentHeights({ counts, expanded, autoSize })
+  const yOf = makeScale(heights)
+
   return (
-    <div className="mx-auto flex h-full max-w-7xl flex-col px-3 pt-4 sm:px-6">
-      {/* week nav */}
+    <div className="mx-auto flex h-full max-w-7xl flex-col px-3 pb-28 pt-4 sm:px-6">
       <div className="mb-2 flex shrink-0 items-center justify-center gap-3">
-        <NavBtn onClick={() => setOffset((o) => o - 1)} label="Previous"><Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} /></NavBtn>
+        <NavBtn onClick={() => setOffset((o) => o - 1)} label="Previous">
+          <Icon name="chevronRight" size={16} style={{ transform: 'rotate(180deg)' }} />
+        </NavBtn>
         <button
-          onClick={() => setOffset(0)}
+          onClick={() => { setOffset(0); setExpanded(null) }}
           className="font-display text-[15px] font-semibold"
           style={{ color: offset === 0 ? 'var(--text)' : 'var(--text-soft)' }}
         >
           {offset === 0 ? 'this week' : days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </button>
-        <NavBtn onClick={() => setOffset((o) => o + 1)} label="Next"><Icon name="chevronRight" size={16} /></NavBtn>
+        <NavBtn onClick={() => setOffset((o) => o + 1)} label="Next">
+          <Icon name="chevronRight" size={16} />
+        </NavBtn>
+        {expanded != null && (
+          <button
+            onClick={() => setExpanded(null)}
+            className="ml-2 rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)' }}
+          >
+            collapse
+          </button>
+        )}
       </div>
 
-      {/* day headers + all-day band */}
+      {/* headers + docked unscheduled band */}
       <div className="flex shrink-0">
         <div className="w-10 shrink-0 sm:w-12" />
-        <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`, gap: 4 }}>
+        <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${span}, minmax(0,1fr))`, gap: 5 }}>
           {days.map((d, i) => {
             const isToday = keys[i] === today
             const s = formatShort(d)
-            const { overdue, anytime } = dayBands(store.tasks, keys[i], today)
-            const shownOverdue = overdue.slice(0, OVERDUE_VISIBLE)
-            const hiddenOverdue = overdue.slice(OVERDUE_VISIBLE)
-            const { Art, rest } = pickWaiting(keys[i])
+            const b = bands[i]
             return (
               <div key={keys[i]} className="min-w-0">
                 <div className="pb-1 text-center">
                   <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-faint)' }}>{s.wd}</div>
                   <div className="font-display text-[17px]" style={{ color: isToday ? 'var(--text)' : 'var(--text-soft)' }}>{s.day}</div>
                 </div>
-
-                <div className="flex min-h-[26px] flex-col gap-1 pb-1.5">
-                  {shownOverdue.map((t) => (
-                    <Chip key={t.id} task={t} hue="coral" variant={variant} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
-                  ))}
-                  <AnimatePresence>
-                    {hiddenOverdue.length > 0 && (
-                      <Sticker
-                        key="pile"
-                        Art={Art}
-                        rest={rest}
-                        size={42}
-                        calm={calm}
-                        title={`${hiddenOverdue.length} still lurking`}
-                        onClick={() => actions?.bump?.(hiddenOverdue.map((t) => t.id))}
-                        className="justify-center"
-                      >
-                        <span className="text-[10px] font-semibold" style={{ color: 'var(--text-faint)' }}>+{hiddenOverdue.length}</span>
-                      </Sticker>
-                    )}
-                  </AnimatePresence>
-                  {anytime.map((t) => (
-                    <Chip key={t.id} task={t} hue="blue" variant={variant} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
-                  ))}
-                </div>
+                {/* On days other than today, unscheduled work docks here, fused
+                    to the top of the grid. Today's floats to the now-line instead. */}
+                {!isToday && (
+                  <DockedUnscheduled
+                    bands={b}
+                    dayKey={keys[i]}
+                    calm={calm}
+                    variant={variant}
+                    onToggle={onToggle}
+                    onEdit={onEdit}
+                    onBump={actions?.bump}
+                  />
+                )}
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* scrollable 24h body */}
-      <div ref={bodyRef} className="no-scrollbar relative flex-1 overflow-y-auto pb-28">
-        <div className="relative flex" style={{ height: DAY_H }}>
-          {/* hour gutter */}
-          <div className="relative w-10 shrink-0 sm:w-12">
-            {HOURS.map((h) => (
-              <span
-                key={h}
-                className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums"
-                style={{ top: fracOf(h * 60) * DAY_H, color: 'var(--text-faint)' }}
-              >
-                {fmtTime(h * 60)}
-              </span>
-            ))}
-          </div>
-
-          {/* columns */}
-          <div
-            className="relative grid flex-1"
-            style={{
-              gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`,
-              gap: 4,
-              backgroundImage: `repeating-linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent ${DAY_H / 8}px)`,
-            }}
-          >
-            {days.map((d, i) => (
-              <DayColumn
-                key={keys[i]}
-                dayKey={keys[i]}
-                isToday={keys[i] === today}
-                store={store}
-                today={today}
-                nowMin={nowMin}
-                tintEnabled={tintEnabled}
-                variant={variant}
-                onToggle={onToggle}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                onUncomplete={onUncomplete}
-              />
-            ))}
-
-            {/* one continuous now-line; only the segment over today is full strength */}
-            <div
-              className="pointer-events-none absolute inset-x-0 z-20"
-              style={{ top: fracOf(nowMin) * DAY_H }}
+      {/* the segmented body */}
+      <div className="relative mt-1 flex flex-1">
+        <div className="relative w-10 shrink-0 sm:w-12">
+          {SEGS.map((i) => (
+            <button
+              key={i}
+              onClick={() => setExpanded(expanded === i ? null : i)}
+              className="absolute right-1.5 text-[10px] tabular-nums"
+              style={{ top: yOf(i * SEG_MIN) - 1, color: expanded === i ? 'var(--text)' : 'var(--text-faint)' }}
+              title={expanded === i ? 'collapse' : 'expand to hourly'}
             >
-              <div style={{ height: 1.5, background: 'var(--now-line)', opacity: 0.22 }} />
-              {todayIdx >= 0 && (
-                <div
-                  className="absolute"
-                  style={{
-                    top: 0,
-                    height: 1.5,
-                    background: 'var(--now-line)',
-                    left: `calc(${(todayIdx / span) * 100}% )`,
-                    width: `calc(${(1 / span) * 100}% - 4px)`,
-                    boxShadow: '0 0 8px 1px var(--now-glow)',
-                  }}
-                >
-                  <span className="nowline-pill" style={{ top: -9 }}>{fmtTime(nowMin)}</span>
-                </div>
-              )}
-            </div>
+              {fmtTime(i * SEG_MIN)}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative grid flex-1" style={{ gridTemplateColumns: `repeat(${span}, minmax(0,1fr))`, gap: 5, height: BODY_H }}>
+          {/* segment rules + the expanded segment's hourly detail */}
+          {SEGS.map((i) => (
+            <div
+              key={`seg${i}`}
+              className="pointer-events-none absolute inset-x-0"
+              style={{
+                top: yOf(i * SEG_MIN),
+                height: heights[i],
+                transition: calm ? 'none' : 'top .42s var(--ease-spring), height .42s var(--ease-spring)',
+                borderTop: '1px solid var(--grid-line)',
+                background: expanded === i ? 'color-mix(in srgb, var(--text) 3%, transparent)' : 'transparent',
+                backgroundImage:
+                  expanded === i
+                    ? `repeating-linear-gradient(to bottom, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent ${heights[i] / 4}px)`
+                    : 'none',
+              }}
+            />
+          ))}
+
+          {days.map((d, i) => (
+            <DayColumn
+              key={keys[i]}
+              bands={bands[i]}
+              dayKey={keys[i]}
+              isToday={keys[i] === today}
+              yOf={yOf}
+              nowMin={nowMin}
+              today={today}
+              tintEnabled={tintEnabled}
+              elapsedStyle={elapsedStyle}
+              variant={variant}
+              calm={calm}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onUncomplete={onUncomplete}
+              onBump={actions?.bump}
+            />
+          ))}
+
+          {/* ONE continuous now-line across the whole grid — full strength over
+              today, ghosted either side, so the signature object survives the
+              axis change from the daily view. */}
+          <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: yOf(nowMin) }}>
+            <div style={{ height: 1.5, background: 'var(--now-line)', opacity: 0.2 }} />
+            {todayIdx >= 0 && (
+              <div
+                className="absolute top-0"
+                style={{
+                  height: 1.5,
+                  background: 'var(--now-line)',
+                  left: `calc((100% - ${(span - 1) * 5}px) / ${span} * ${todayIdx} + ${todayIdx * 5}px)`,
+                  width: `calc((100% - ${(span - 1) * 5}px) / ${span})`,
+                  boxShadow: '0 0 8px 1px var(--now-glow)',
+                }}
+              >
+                <span className="nowline-pill" style={{ top: -9 }}>{fmtTime(nowMin)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -182,17 +227,31 @@ export default function Week({ store, now, onEdit, actions }) {
   )
 }
 
-function DayColumn({ dayKey, isToday, store, today, nowMin, tintEnabled, variant, onToggle, onDelete, onEdit, onUncomplete }) {
-  const { timed, completed } = dayBands(store.tasks, dayKey, today)
-  const { rows, laneCount } = packLanes(timed, 0) // 0 → no min-width inflation; lanes split the column horizontally
+// ---- one day column ---------------------------------------------------------
+function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, elapsedStyle, variant, calm, onToggle, onDelete, onEdit, onUncomplete, onBump }) {
+  const { overdue, timed, anytime, completed } = bands
+  const unscheduled = [...overdue, ...anytime]
+
+  // Today's unscheduled work rides the now-line. Timed blocks always win their
+  // slot — their position carries information unscheduled tasks don't have — so
+  // the pile dodges: full width, then narrowed beside, then collapsed to a tag.
+  const blocking = isToday
+    ? timed.filter((t) => {
+        const s = t.start ?? 0
+        const e = t.end != null && t.end > s ? t.end : s + 30
+        return nowMin >= s - 30 && nowMin <= e + 30
+      }).length
+    : 0
+  const floatMode = blocking === 0 ? 'full' : blocking === 1 ? 'dodge' : 'tag'
+  const { Art, rest } = pickWaiting(dayKey)
 
   return (
-    <div className="relative min-w-0" style={{ background: isToday ? 'var(--bg-soft)' : 'transparent' }}>
-      {rows.map(({ task, lane }) => {
-        const start = task.start ?? 0
-        const end = task.end != null && task.end > start ? task.end : start + 30
-        const top = fracOf(start) * DAY_H
-        const h = Math.max(22, (fracOf(end) - fracOf(start)) * DAY_H)
+    <div className="relative min-w-0" style={{ background: isToday ? 'var(--bg-soft)' : 'transparent', borderRadius: 8 }}>
+      {timed.map((task) => {
+        const s = task.start ?? 0
+        const e = task.end != null && task.end > s ? task.end : s + 30
+        const top = yOf(s)
+        const h = Math.max(20, yOf(e) - top)
         const passed = elapsedToday(task, nowMin, today)
         const elapsed = passed ? 1 : tintEnabled ? elapsedFraction(task, nowMin, today) : 0
         const hue = passed ? 'coral' : 'blue'
@@ -202,39 +261,76 @@ function DayColumn({ dayKey, isToday, store, today, nowMin, tintEnabled, variant
           <button
             key={task.id}
             onClick={() => onEdit?.(task)}
-            onContextMenu={(e) => { e.preventDefault(); onDelete(task.id) }}
+            onContextMenu={(ev) => { ev.preventDefault(); onDelete(task.id) }}
             title={`${task.title} · ${fmtRange(task.start, task.end)}`}
-            className="absolute overflow-hidden rounded-[9px] px-1.5 text-left"
+            className="inked-sm absolute overflow-hidden rounded-[9px] px-1.5 text-left"
             style={{
-              top,
-              height: h,
-              left: `${(lane / laneCount) * 100}%`,
-              width: `calc(${(1 / laneCount) * 100}% - 2px)`,
+              top, height: h, left: 2, right: 2,
+              transition: calm ? 'none' : 'top .42s var(--ease-spring), height .42s var(--ease-spring)',
               background: tinted ? `var(--task-${hue}-tint-bg)` : `var(--task-${hue}-bg)`,
               color: tinted ? `var(--task-${hue}-tint-text)` : `var(--task-${hue}-text)`,
-              border: strong ? '1.5px solid var(--coral-strong)' : tinted ? `0.5px solid var(--task-${hue}-tint-border)` : 'none',
+              outline: strong ? '2px solid var(--coral-strong)' : 'none',
             }}
           >
-            {/* elapsed two-tone fill, vertical here since time runs downward */}
             {elapsed > 0 && !passed && (
               <span
                 className="pointer-events-none absolute inset-x-0 top-0 z-0"
-                style={{
-                  height: `${elapsed * 100}%`,
-                  background: tinted
-                    ? 'var(--task-coral-tint-bg)'
-                    : 'color-mix(in srgb, var(--task-coral-bg) 70%, transparent)',
-                }}
+                style={
+                  elapsedStyle === 'hatch'
+                    ? { height: `${elapsed * 100}%`, backgroundImage: 'repeating-linear-gradient(115deg, color-mix(in srgb, currentColor 30%, transparent) 0 2px, transparent 2px 7px)' }
+                    : { height: `${elapsed * 100}%`, background: 'color-mix(in srgb, var(--task-coral-bg) 65%, transparent)' }
+                }
               />
             )}
-            <span className="relative z-[1] block truncate pt-0.5 text-[11px] font-semibold leading-tight">{task.title}</span>
+            <span className="relative z-[1] block truncate pt-0.5 text-[11px] font-bold leading-tight">{task.title}</span>
             {h > 34 && <span className="relative z-[1] block truncate text-[10px] opacity-70">{fmtTime(task.start)}</span>}
           </button>
         )
       })}
 
+      {/* today's floating unscheduled pile */}
+      {isToday && unscheduled.length > 0 && (
+        <div
+          className="absolute z-[15]"
+          style={{
+            top: yOf(nowMin) + 4,
+            transition: calm ? 'none' : 'top .42s var(--ease-spring)',
+            ...(floatMode === 'full' ? { left: 2, right: 2 }
+              : floatMode === 'dodge' ? { left: '54%', right: 2 }
+              : { right: 1, width: 'auto' }),
+          }}
+        >
+          {floatMode === 'tag' ? (
+            <Sticker
+              Art={Art} rest={rest} size={30} calm={calm}
+              title={`${unscheduled.length} unscheduled`}
+              onClick={() => onEdit?.(unscheduled[0])}
+              className="rounded-full px-1.5 py-0.5"
+              style={{ background: 'var(--surface-2)', border: '2px solid var(--ink)' }}
+            >
+              <span className="text-[9px] font-bold" style={{ color: 'var(--coral-strong)' }}>{unscheduled.length}</span>
+            </Sticker>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {unscheduled.slice(0, floatMode === 'dodge' ? 1 : 2).map((t) => (
+                <MiniChip key={t.id} task={t} overdue={overdue.includes(t)} variant={variant} onToggle={onToggle} onEdit={onEdit} />
+              ))}
+              {unscheduled.length > (floatMode === 'dodge' ? 1 : 2) && (
+                <button
+                  onClick={() => onBump?.(unscheduled.slice(floatMode === 'dodge' ? 1 : 2).map((t) => t.id))}
+                  className="rounded-md px-1 py-0.5 text-left text-[9px] font-bold"
+                  style={{ background: 'color-mix(in srgb, var(--coral) 22%, transparent)', color: 'var(--coral-strong)', border: '1.5px dashed var(--coral-strong)' }}
+                >
+                  +{unscheduled.length - (floatMode === 'dodge' ? 1 : 2)} waiting
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {completed.length > 0 && (
-        <div className="absolute inset-x-0 px-0.5" style={{ top: DAY_H - 4 }}>
+        <div className="absolute inset-x-0" style={{ top: BODY_H - 2 }}>
           <CompletedSection tasks={completed} onUncomplete={onUncomplete} compact />
         </div>
       )}
@@ -242,16 +338,43 @@ function DayColumn({ dayKey, isToday, store, today, nowMin, tintEnabled, variant
   )
 }
 
-function Chip({ task, hue, variant, onToggle, onEdit, onDelete }) {
-  const tinted = variant === 'tinted'
+// ---- docked unscheduled band (non-today columns) -----------------------------
+function DockedUnscheduled({ bands, dayKey, calm, variant, onToggle, onEdit, onBump }) {
+  const items = [...bands.overdue, ...bands.anytime]
+  if (!items.length) return <div style={{ height: 6 }} />
+  const shown = items.slice(0, OVERDUE_VISIBLE)
+  const hidden = items.slice(OVERDUE_VISIBLE)
+  const { Art, rest } = pickWaiting(dayKey)
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      onContextMenu={(e) => { e.preventDefault(); onDelete(task.id) }}
-      className="flex items-center gap-1 rounded-lg px-1.5 py-1"
+    <div
+      className="mb-0.5 flex flex-col gap-1 p-1"
+      style={{ background: 'color-mix(in srgb, var(--text) 4%, transparent)', border: '2px solid var(--ink)', borderBottom: 'none', borderRadius: '8px 8px 2px 2px' }}
+    >
+      {shown.map((t) => (
+        <MiniChip key={t.id} task={t} overdue={bands.overdue.includes(t)} variant={variant} onToggle={onToggle} onEdit={onEdit} />
+      ))}
+      <AnimatePresence>
+        {hidden.length > 0 && (
+          <Sticker
+            key="pile" Art={Art} rest={rest} size={28} calm={calm}
+            title={`${hidden.length} still lurking — bump to tomorrow`}
+            onClick={() => onBump?.(hidden.map((t) => t.id))}
+            className="justify-center"
+          >
+            <span className="text-[9px] font-bold" style={{ color: 'var(--text-faint)' }}>+{hidden.length}</span>
+          </Sticker>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function MiniChip({ task, overdue, variant, onToggle, onEdit }) {
+  const tinted = variant === 'tinted'
+  const hue = overdue ? 'coral' : 'blue'
+  return (
+    <div
+      className="inked-sm flex items-center gap-1 rounded-md px-1 py-0.5"
       style={{
         background: tinted ? `var(--task-${hue}-tint-bg)` : `var(--task-${hue}-bg)`,
         color: tinted ? `var(--task-${hue}-tint-text)` : `var(--task-${hue}-text)`,
@@ -260,13 +383,13 @@ function Chip({ task, hue, variant, onToggle, onEdit, onDelete }) {
       <button
         aria-label={`Complete ${task.title}`}
         onClick={(e) => { e.stopPropagation(); onToggle(task.id) }}
-        className="grid h-[11px] w-[11px] shrink-0 place-items-center rounded-full border-[1.5px]"
+        className="grid h-[10px] w-[10px] shrink-0 place-items-center rounded-full border-[1.5px]"
         style={{ borderColor: 'currentColor' }}
       />
-      <button onClick={() => onEdit?.(task)} className="min-w-0 flex-1 truncate text-left text-[10px] font-semibold">
+      <button onClick={() => onEdit?.(task)} className="min-w-0 flex-1 truncate text-left text-[10px] font-bold">
         {task.title}
       </button>
-    </motion.div>
+    </div>
   )
 }
 
