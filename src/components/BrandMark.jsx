@@ -38,29 +38,29 @@ export default function BrandMark({ size = 30, animate = true, tumbling = false,
       aria-label="StackTask"
     >
       {CUBES.map((c, i) => (
-        <motion.g
-          key={i}
-          // fill-box keeps each cube rotating about its OWN centre rather than
-          // the shared viewBox origin
-          style={{ transformBox: 'fill-box', transformOrigin: 'center', originX: '50%', originY: '50%' }}
-          initial={false}
-          animate={
-            still
-              ? { rotate: c.rest, x: 0, y: 0 }
-              : tumbling
-              ? { rotate: c.rest + c.spin, x: c.drift, y: -12 }
-              : { rotate: c.rest, x: 0, y: 0 }
-          }
-          transition={
-            still
-              ? { duration: 0 }
-              : { type: 'spring', stiffness: 210, damping: 13, mass: 0.9, delay: i * 0.045 }
-          }
-        >
-          <g transform={`translate(${c.x} ${c.y}) scale(${c.s})`}>
+        // Outer <g> statically positions the cube; the inner <motion.g> rotates
+        // around its LOCAL origin — which the parent translate has placed at the
+        // cube's centre. No transform-box / transform-origin needed, so it behaves
+        // identically in WebKit (fill-box rotation was the Safari-flaky path).
+        <g key={i} transform={`translate(${c.x} ${c.y}) scale(${c.s})`}>
+          <motion.g
+            initial={false}
+            animate={
+              still
+                ? { rotate: c.rest, x: 0, y: 0 }
+                : tumbling
+                ? { rotate: c.rest + c.spin, x: c.drift, y: -14 }
+                : { rotate: c.rest, x: 0, y: 0 }
+            }
+            transition={
+              still
+                ? { duration: 0 }
+                : { type: 'spring', stiffness: 210, damping: 13, mass: 0.9, delay: i * 0.045 }
+            }
+          >
             <Cube fill={c.fill} />
-          </g>
-        </motion.g>
+          </motion.g>
+        </g>
       ))}
     </svg>
   )

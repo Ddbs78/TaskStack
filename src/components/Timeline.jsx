@@ -18,8 +18,8 @@ export default function Timeline({ store, now, onEdit, actions }) {
   const tintEnabled = store.settings.overdueTint !== false
   const scrollerRef = useRef(null)
   const nowBarRef = useRef(null)
+  const nowTravelRef = useRef(null)
   const [dayWidth, setDayWidth] = useState(360)
-  const [lineEase, setLineEase] = useState(false)
 
   const onToggle = actions?.complete || store.toggleTask
   const onDelete = actions?.remove || store.deleteTask
@@ -53,12 +53,20 @@ export default function Timeline({ store, now, onEdit, actions }) {
     el.scrollLeft = mobile ? PAST * dayWidth : (PAST - 1) * dayWidth
   }, [dayWidth, mobile])
 
-  // the now-line starts exactly on the current time (no transition) and only eases
-  // for subsequent minute drift once layout has settled.
+  // The now-line is positioned IMPERATIVELY by a rAF loop writing style.left
+  // directly — no CSS transition, so it's exact on the very first frame and can
+  // never "crawl" from a stale position to the right one (the old load-time
+  // jump). Per-frame DOM write, zero React re-renders, per the render-loop rule.
   useEffect(() => {
-    const t = setTimeout(() => setLineEase(true), 700)
-    return () => clearTimeout(t)
-  }, [])
+    let raf = 0
+    const loop = () => {
+      const el = nowTravelRef.current
+      if (el) el.style.left = (PAST * dayWidth + nowFraction() * dayWidth) + 'px'
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [dayWidth])
 
   // hover-glow the now-line without blocking clicks: the line is pointer-events:none;
   // we toggle the glow by cursor proximity to its current screen x.
@@ -89,8 +97,9 @@ export default function Timeline({ store, now, onEdit, actions }) {
         style={{ scrollSnapType: mobile ? 'x mandatory' : 'none' }}
       >
         <div className="relative h-full" style={{ width: contentWidth, ...gridBg }}>
-          {/* now-line travels across today's column (pointer-events:none → clicks pass through) */}
-          <div className="nowline-travel" style={{ left: nowContentX, transition: lineEase ? 'left 30s linear' : 'none' }}>
+          {/* now-line travels across today's column (pointer-events:none → clicks pass through).
+              `left` is written imperatively each frame by the rAF above — no transition. */}
+          <div ref={nowTravelRef} className="nowline-travel" style={{ left: nowContentX }}>
             <div className="nowline-pill">{fmtTime(now.getHours() * 60 + now.getMinutes())}</div>
             <div ref={nowBarRef} className="nowline-bar" />
           </div>

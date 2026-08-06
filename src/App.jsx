@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useStore } from './state/store'
 import { useNow, useMidnightTick } from './state/time'
 import Timeline from './components/Timeline'
@@ -10,6 +10,7 @@ import AssistantPanel from './components/AssistantPanel'
 import SettingsModal from './components/SettingsModal'
 import TaskEditor from './components/TaskEditor'
 import UndoToast from './components/UndoToast'
+import ErrorBoundary from './components/ErrorBoundary'
 import BrandMark from './components/BrandMark'
 import Celebration from './components/Celebration'
 import RightNow from './components/RightNow'
@@ -131,20 +132,23 @@ export default function App() {
         </div>
       </header>
 
-      {/* views */}
+      {/* views — NO `mode="wait"`: waiting on the outgoing view's exit deadlocks
+          in Safari when it has a nested AnimatePresence mid-exit (e.g. a sticker
+          you just interacted with), leaving the whole app blank. A plain keyed
+          crossfade mounts the incoming view immediately. The ErrorBoundary keys
+          off `view`, so switching views also clears any error. */}
       <main className="relative flex-1 overflow-hidden">
-        <AnimatePresence mode="wait">
+        <ErrorBoundary resetKey={view}>
           <motion.div
             key={view}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="no-scrollbar h-full overflow-y-auto"
           >
             <ViewComp store={store} now={now} onEdit={setEditing} actions={actions} />
           </motion.div>
-        </AnimatePresence>
+        </ErrorBoundary>
       </main>
 
       <UndoToast

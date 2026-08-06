@@ -58,7 +58,7 @@ export default function Week({ store, now, onEdit, actions }) {
           className="font-display text-[15px] font-semibold"
           style={{ color: offset === 0 ? 'var(--text)' : 'var(--text-soft)' }}
         >
-          {offset === 0 ? 'this week' : days[0].toLocaleDateString('default', { month: 'short', day: 'numeric' })}
+          {offset === 0 ? 'this week' : days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </button>
         <NavBtn onClick={() => setOffset((o) => o + 1)} label="Next"><Icon name="chevronRight" size={16} /></NavBtn>
       </div>

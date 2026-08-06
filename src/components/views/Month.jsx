@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import TaskCard from '../TaskCard'
 import CompletedSection from '../CompletedSection'
 import Sticker from '../stickers/Sticker'
@@ -66,7 +66,7 @@ export default function Month({ store, now, onEdit, actions }) {
     return out
   }, [store.tasks, keys.join(), today])
 
-  const monthName = view.toLocaleString('default', { month: 'long', year: 'numeric' })
+  const monthName = view.toLocaleString(undefined, { month: 'long', year: 'numeric' })
   const sel = byDay[selected] || dayBands(store.tasks, selected, today)
   const selActive = [...sel.overdue, ...sel.timed, ...sel.anytime]
   const { Art, rest } = pickWaiting(selected)
@@ -112,14 +112,6 @@ export default function Month({ store, now, onEdit, actions }) {
                 opacity: inMonth ? 1 : 0.35,
               }}
             >
-              {isSel && (
-                <motion.span
-                  layoutId="month-sel"
-                  className="absolute inset-0 -z-10 rounded-2xl"
-                  style={{ background: 'var(--bg-soft)' }}
-                  transition={{ type: 'spring', stiffness: 480, damping: 34 }}
-                />
-              )}
               <span className="text-[11px] font-bold sm:text-sm" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-soft)' }}>
                 {d.getDate()}
               </span>
@@ -164,7 +156,7 @@ export default function Month({ store, now, onEdit, actions }) {
       {/* selected-day drawer */}
       <div className="mt-5 pb-28">
         <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--text-soft)' }}>
-          {keyToDate(selected).toLocaleDateString('default', { weekday: 'long', month: 'short', day: 'numeric' })}
+          {keyToDate(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
         </h3>
         <div className="flex flex-col gap-3">
           <AnimatePresence mode="popLayout" initial={false}>
