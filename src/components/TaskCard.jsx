@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Icon from './Icon'
+import MarkerRule from './MarkerRule'
 import { fmtRange, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
 
@@ -39,7 +40,6 @@ const TaskCard = forwardRef(function TaskCard(
     ? {
         background: `var(--task-${hue}-tint-bg)`,
         color: `var(--task-${hue}-tint-text)`,
-        border: `0.5px solid var(--task-${hue}-tint-border)`,
       }
     : {
         background: `var(--task-${hue}-bg)`,
@@ -88,7 +88,6 @@ const TaskCard = forwardRef(function TaskCard(
     <motion.div
       ref={ref}
       layout
-      layoutId={task.id}
       variants={variants}
       initial="initial"
       animate="animate"
@@ -99,11 +98,11 @@ const TaskCard = forwardRef(function TaskCard(
       style={{ touchAction: 'pan-y' }}
     >
       {label && (
-        <div
-          className="ml-1 mb-1 text-[12px] font-semibold tracking-wide"
-          style={{ color: labelColor }}
-        >
-          {label}
+        <div className="ml-1 mb-1">
+          <div className="text-[12px] font-semibold tracking-wide" style={{ color: labelColor }}>
+            {label}
+          </div>
+          <MarkerRule color={labelColor} seed={task.id?.length || 0} opacity={0.42} />
         </div>
       )}
 
@@ -114,10 +113,9 @@ const TaskCard = forwardRef(function TaskCard(
         onPointerMove={movePress}
         onPointerUp={cancelPress}
         onPointerLeave={cancelPress}
-        className="group relative flex h-[44px] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4"
+        className="inked group relative flex h-[44px] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4"
         style={{
           ...cardStyle,
-          boxShadow: tinted ? undefined : 'var(--shadow-card)',
           outline: pressing ? '2px solid var(--now-line)' : undefined,
           outlineOffset: pressing ? '2px' : undefined,
           transform: pressing ? 'scale(0.97)' : undefined,

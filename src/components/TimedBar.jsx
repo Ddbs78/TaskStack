@@ -77,7 +77,7 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
   const showChevron = !fitsFull // chevron only when there's detail you can't see
   const canPeek = !fitsFull
   const style = tinted
-    ? { background: `var(--task-${hue}-tint-bg)`, color: `var(--task-${hue}-tint-text)`, border: `0.5px solid var(--task-${hue}-tint-border)` }
+    ? { background: `var(--task-${hue}-tint-bg)`, color: `var(--task-${hue}-tint-text)` }
     : { background: `var(--task-${hue}-bg)`, color: `var(--task-${hue}-text)` }
 
   const draggingRef = useRef(false)
@@ -169,7 +169,7 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
         onDoubleClick={() => onDelete(task.id)}
         onMouseEnter={openPeek}
         onMouseLeave={scheduleClose}
-        className={`group absolute flex items-center overflow-hidden rounded-[13px] ${showText ? 'justify-start' : 'justify-center'}`}
+        className={`inked-sm group absolute flex items-center overflow-hidden rounded-[13px] ${showText ? 'justify-start' : 'justify-center'}`}
         style={{ ...style, left: `${left}%`, width: `${widthPct}%`, minWidth: MIN_PX, top: lane * LANE, height: BAR_H, paddingLeft: PADX, paddingRight: PADX, gap: GAP, boxShadow: tinted ? undefined : 'var(--shadow-card)' }}
       >
         {onResize && renderEdge('start')}

@@ -193,3 +193,36 @@ button { cursor: pointer; }
 
 /* the real brand artwork scales to the box it's given */
 .brandmark svg { height: 100%; width: auto; display: block; }
+
+/* ---------------------------------------------------------------------------
+   Hand-drawn craft layer — carries the logo's language into the UI:
+   thick ink outlines, hard offset shadows, nothing perfectly straight.
+--------------------------------------------------------------------------- */
+[data-theme='dark']  { --ink: #14141a; --ink-shadow: rgba(0,0,0,.45); --paper-grain: rgba(255,248,238,.032); }
+[data-theme='light'] { --ink: #1b1b22; --ink-shadow: rgba(27,27,34,.22); --paper-grain: rgba(27,27,34,.022); }
+
+/* inked task surfaces */
+.inked {
+  border: 2px solid var(--ink);
+  box-shadow: 2.5px 3px 0 var(--ink-shadow);
+}
+.inked-sm {
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2.5px 0 var(--ink-shadow);
+}
+
+/* paper ground: faint grain baked into the canvas itself, so it sits BEHIND
+   everything rather than as an overlay that veils the content. */
+body {
+  background-image: radial-gradient(var(--paper-grain) 1px, transparent 1px);
+  background-size: 5px 5px;
+}
+
+/* hand-drawn marker underline under section labels */
+.marker-rule {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 1px;
+  overflow: visible;
+}
