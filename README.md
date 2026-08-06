@@ -1,9 +1,15 @@
-# StackTask — _what needs doing_
+# TaskStack — _what needs doing_
 
-A minimalist, friction-free task manager built around a **living timeline**. Tasks
-"squeeze in" when added and "evaporate" when done, a now-line glides through the
-day, and anything you miss rolls forward and restacks in coral at the top of today.
-Warm, organic, Claude-flavored aesthetic. Local-first — everything stays on device.
+A minimalist, friction-free task manager built around a **living timeline**. 
+Taskstack wasn't made to offer a new alternative to the thousands of task platforms 
+that exist but rather tailor it to be optimal for individuals who struggle with ADHD 
+and Procrastination. Our Ethos is that every detail within this platform is intentional
+and backed by research. Wether its the visual effect of seeing overdue tasks "stacking up", 
+or the Moving timeline to target temporal discounting, every detail, no matter the size, 
+is served to help those who feel like there is no solution for task management.
+A now-line glides through the day, and anything you miss rolls forward and restacks 
+in coral at the top of today. Warm, organic, personalized aesthetic. Local-first — 
+everything stays on device.
 
 The visual layer follows the design spec in `implementation_plan.md` (§6 Animation,
 §7 Design System): SF Pro Rounded typography, the spec color tokens (warm charcoal
