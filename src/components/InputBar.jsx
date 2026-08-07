@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import TimePopover from './TimePopover'
 import UrgencyBar from './UrgencyBar'
+import DatePopover from './DatePopover'
 import Icon from './Icon'
 import { parseInput } from '../nlp/parse'
 import { addDays, dateKey } from '../state/time'
@@ -22,13 +23,13 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
   const [urgency, setUrgency] = useState(null)
   const [urgencyOff, setUrgencyOff] = useState(false)
   const [showUrgency, setShowUrgency] = useState(false)
+  const [showDate, setShowDate] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [pos, setPos] = useState(null) // {x,y} once dragged; null = docked bottom-center
   const [onEdge, setOnEdge] = useState(false)
   const draggingRef = useRef(false) // ref, not state → the drag never triggers a re-render
   const inputRef = useRef(null)
-  const dateRef = useRef(null)
   const barRef = useRef(null)
   const innerRef = useRef(null)
 
@@ -57,6 +58,7 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     setUrgency(null)
     setUrgencyOff(false)
     setShowUrgency(false)
+    setShowDate(false)
     inputRef.current?.focus()
   }
 
@@ -86,7 +88,11 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
     e.preventDefault()
     const inner = innerRef.current
     const wrap = inner.parentElement
-    const r = inner.getBoundingClientRect()
+    // Measure the grab offset against WRAP — the element we actually move.
+    // `inner` also contains the ⋯ menu, which renders ABOVE the bar, so when
+    // that menu is open inner.top sits far higher than the bar and the offset
+    // throws the bar to the top of the screen on the first pointermove.
+    const r = wrap.getBoundingClientRect()
     const w = r.width, h = r.height
     const offx = e.clientX - r.left, offy = e.clientY - r.top
     const dockLeft = window.innerWidth / 2 - w / 2
@@ -223,21 +229,22 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
                 <div className="relative hidden sm:block">
                   <button
                     type="button"
-                    onClick={() => { const el = dateRef.current; if (el?.showPicker) el.showPicker(); else el?.focus() }}
+                    onClick={() => setShowDate((v) => !v)}
                     className="rounded-full px-1.5 py-1 text-sm tabular-nums"
-                    style={{ color: 'var(--text-soft)' }}
+                    style={{ color: showDate ? 'var(--text)' : 'var(--text-soft)' }}
+                    title="Pick a date"
                   >
                     {effectiveDate.slice(5, 7)}/{effectiveDate.slice(8, 10)}
                   </button>
-                  <input
-                    ref={dateRef}
-                    type="date"
-                    aria-label="Custom date"
-                    tabIndex={-1}
-                    value={effectiveDate}
-                    onChange={(e) => setDateOverride(e.target.value)}
-                    className="pointer-events-none absolute bottom-0 left-1/2 h-0 w-0 opacity-0"
-                  />
+                  <AnimatePresence>
+                    {showDate && (
+                      <DatePopover
+                        value={effectiveDate}
+                        onChange={(k) => setDateOverride(k)}
+                        onClose={() => setShowDate(false)}
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
                 <div className="relative">
                   <IconBtn onClick={() => setShowTime((v) => !v)} active={showTime || effectiveTime.start != null} title="Set time"><Icon name="clock" size={19} /></IconBtn>

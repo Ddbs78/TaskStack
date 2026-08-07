@@ -11,7 +11,8 @@ export default function UndoToast({ toast, onUndo, onDismiss }) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.97 }}
           transition={{ type: 'spring', stiffness: 480, damping: 32 }}
-          className="pointer-events-none fixed inset-x-0 bottom-28 z-50 flex justify-center px-4"
+          className="pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4"
+          style={{ bottom: 112 }}
         >
           <div
             className="pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] py-2.5 pl-4 pr-2 shadow-2xl"

@@ -155,10 +155,12 @@ function ZeroCinematic({ onSkip, still }) {
 }
 
 // ---- everyday completion: corner toast ---------------------------------------
-function OneToast({ done, left, onSkip, still }) {
+// `stacked` lifts this clear of the undo toast, which occupies the same dock.
+function OneToast({ done, left, onSkip, still, stacked }) {
   return (
     <motion.div
-      className="pointer-events-none fixed bottom-28 left-1/2 z-[90] -translate-x-1/2"
+      className="pointer-events-none fixed left-1/2 z-[60] -translate-x-1/2"
+      style={{ bottom: stacked ? 186 : 112 }}
       initial={still ? { opacity: 0 } : { opacity: 0, scale: 0.5, y: 16 }}
       animate={
         still
@@ -190,7 +192,7 @@ function OneToast({ done, left, onSkip, still }) {
   )
 }
 
-export default function Celebration({ event, onDone, calm = false }) {
+export default function Celebration({ event, onDone, calm = false, undoVisible = false }) {
   const prefersReduced = useReducedMotion()
   const still = calm || prefersReduced
   const zero = event?.type === 'zero'
@@ -214,7 +216,7 @@ export default function Celebration({ event, onDone, calm = false }) {
         zero ? (
           <ZeroCinematic key={event.id} onSkip={skip} still={still} />
         ) : (
-          <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} />
+          <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} stacked={undoVisible} />
         )
       )}
     </AnimatePresence>

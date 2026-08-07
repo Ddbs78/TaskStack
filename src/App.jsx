@@ -41,21 +41,20 @@ export default function App() {
   // Completion / deletion go through here so they can raise an Undo toast (§1.15)
   const actions = {
     complete: (id) => {
-      const t = store.tasks.find((x) => x.id === id)
-      // was this the last thing overdue? checked BEFORE the toggle so the
-      // inbox-zero moment stays rare and genuinely earned.
-      const overdueLeft = store.tasks.filter(
-        (x) => x.id !== id && !x.done && isOverdue(x, todayKey())
-      ).length
-      const wasOverdue = t && isOverdue(t, todayKey())
-      // live counts for the toast: what's done today vs what's still outstanding
       const today = todayKey()
+      // Inbox zero = nothing left that is due today or already overdue. Checked
+      // BEFORE the toggle. The old test (was-overdue AND no overdue left) fired
+      // mid-session whenever you cleared an overdue item while other work
+      // remained, and never fired at all if nothing had gone overdue.
+      const stillDue = store.tasks.filter(
+        (x) => x.id !== id && !x.done && (x.date <= today)
+      ).length
       const doneToday = store.tasks.filter((x) => x.done && x.date === today).length + 1
       const left = store.tasks.filter((x) => x.id !== id && !x.done).length
       store.toggleTask(id)
       setCelebration({
         id: Date.now(),
-        type: wasOverdue && overdueLeft === 0 ? 'zero' : 'one',
+        type: stillDue === 0 ? 'zero' : 'one',
         done: doneToday,
         left,
       })
@@ -167,6 +166,7 @@ export default function App() {
       <Celebration
         event={celebration}
         calm={!!store.settings.reduceMotion}
+        undoVisible={!!toast}
         onDone={() => setCelebration(null)}
       />
 
