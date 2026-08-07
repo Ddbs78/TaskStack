@@ -102,7 +102,8 @@ export function useNow(interval = 30000) {
       window.removeEventListener('focus', onFocus)
     }
   }, [interval])
-  return now
+  // returned as a tuple so callers can force a resync (e.g. at midnight)
+  return [now, setNow]
 }
 
 // Smooth (rAF) fraction for the gliding now-line position only.
@@ -148,7 +149,7 @@ export function useMidnightTick(cb) {
       const now = new Date()
       const next = startOfDay(addDays(now, 1))
       timeout = setTimeout(() => {
-        saved.current?.()
+        saved.current?.(new Date())
         schedule()
       }, next - now + 500)
     }

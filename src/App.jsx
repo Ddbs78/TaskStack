@@ -20,7 +20,7 @@ import { todayKey, dateKey, addDays } from './state/time'
 
 export default function App() {
   const store = useStore()
-  const now = useNow(30000)
+  const [now, setNow] = useNow(30000)
   const [view, setView] = useState('three')
   const [bump, setBump] = useState(0) // forces re-derive at midnight
   const [showSettings, setShowSettings] = useState(false)
@@ -34,7 +34,11 @@ export default function App() {
   const tapRef = useRef(0)
   const tapTimer = useRef(null)
 
-  useMidnightTick(() => setBump((b) => b + 1))
+  // Refresh the clock AND bump. Bumping alone remounted the tree while `now`
+  // was still yesterday's Date (useNow polls every 30s), so the timeline rebuilt
+  // its columns around the wrong day and the now-line parked at the start of
+  // yesterday — the Safari midnight freeze.
+  useMidnightTick(() => { setNow(new Date()); setBump((b) => b + 1) })
 
   const showToast = (message, undo) => setToast({ id: Date.now(), message, undo })
 

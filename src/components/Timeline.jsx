@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
-import { addDays, dateKey, startOfDay, todayKey, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
+import { addDays, dateKey, startOfDay, todayKey, daysBetween, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
 import { dayBands, packLanes, OVERDUE_VISIBLE } from '../state/bands'
 import Sticker from './stickers/Sticker'
 import { pickWaiting } from './stickers/art'
@@ -23,6 +23,7 @@ export default function Timeline({ store, now, onEdit, actions }) {
   const nowBarRef = useRef(null)
   const nowTravelRef = useRef(null)
   const [dayWidth, setDayWidth] = useState(360)
+  const [dayFlip, setDayFlip] = useState(0) // increments when the clock crosses midnight
 
   const onToggle = actions?.complete || store.toggleTask
   const onDelete = actions?.remove || store.deleteTask
@@ -30,10 +31,12 @@ export default function Timeline({ store, now, onEdit, actions }) {
   const onBump = actions?.bump
   const calm = !!store.settings.reduceMotion
 
+  const baseKey = dateKey(startOfDay(now))
   const days = useMemo(() => {
     const base = startOfDay(now)
     return Array.from({ length: PAST + FUT + 1 }, (_, i) => addDays(base, i - PAST))
-  }, [now])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseKey])
 
   // measure day width (3 visible on desktop, 1 on mobile)
   useLayoutEffect(() => {
@@ -53,8 +56,10 @@ export default function Timeline({ store, now, onEdit, actions }) {
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    el.scrollLeft = mobile ? PAST * dayWidth : (PAST - 1) * dayWidth
-  }, [dayWidth, mobile])
+    const drift = daysBetween(baseKey, todayKey())
+    const col = PAST + drift
+    el.scrollLeft = mobile ? col * dayWidth : (col - 1) * dayWidth
+  }, [dayWidth, mobile, baseKey, dayFlip])
 
   // The now-line is positioned IMPERATIVELY by a rAF loop writing style.left
   // directly — no CSS transition, so it's exact on the very first frame and can
@@ -62,14 +67,26 @@ export default function Timeline({ store, now, onEdit, actions }) {
   // jump). Per-frame DOM write, zero React re-renders, per the render-loop rule.
   useEffect(() => {
     let raf = 0
+    let lastFrac = nowFraction()
+    // Column PAST is `baseKey`, which can lag reality by a day the instant the
+    // clock rolls over. Measuring the drift every frame means the line is always
+    // over the TRUE current day even if the columns haven't rebuilt yet.
+    let drift = daysBetween(baseKey, todayKey())
     const loop = () => {
       const el = nowTravelRef.current
-      if (el) el.style.left = (PAST * dayWidth + nowFraction() * dayWidth) + 'px'
+      const f = nowFraction()
+      if (f < lastFrac - 0.5) {
+        // wrapped past midnight: re-measure the day and mark the new page
+        drift = daysBetween(baseKey, todayKey())
+        setDayFlip((n) => n + 1)
+      }
+      lastFrac = f
+      if (el) el.style.left = ((PAST + drift) * dayWidth + f * dayWidth) + 'px'
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [dayWidth])
+  }, [dayWidth, baseKey])
 
   // hover-glow the now-line without blocking clicks: the line is pointer-events:none;
   // we toggle the glow by cursor proximity to its current screen x.
@@ -105,6 +122,8 @@ export default function Timeline({ store, now, onEdit, actions }) {
           <div ref={nowTravelRef} className="nowline-travel" style={{ left: nowContentX }}>
             <div className="nowline-pill">{fmtTime(now.getHours() * 60 + now.getMinutes())}</div>
             <div ref={nowBarRef} className="nowline-bar" />
+            {/* fresh-page flourish: the line pulses as it wraps into a new day */}
+            {dayFlip > 0 && <div key={dayFlip} className="nowline-flip" />}
           </div>
 
           <div className="flex h-full">

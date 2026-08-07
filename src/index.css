@@ -226,3 +226,22 @@ body {
   margin-top: 1px;
   overflow: visible;
 }
+
+/* midnight wrap: the now-line pulses as it crosses into a new day */
+@keyframes nowFlip {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0.2); }
+  35%  { opacity: 1; transform: translateX(-50%) scaleY(1); }
+  100% { opacity: 0; transform: translateX(-50%) scaleY(1); }
+}
+.nowline-flip {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  bottom: 0;
+  width: 7px;
+  border-radius: 4px;
+  background: var(--now-line);
+  filter: blur(3px);
+  pointer-events: none;
+  animation: nowFlip 2.2s ease-out forwards;
+}
