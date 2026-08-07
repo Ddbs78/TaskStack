@@ -15,6 +15,7 @@ import BrandMark from './components/BrandMark'
 import Celebration from './components/Celebration'
 import RightNow from './components/RightNow'
 import Guide from './components/Guide'
+import PencilTrail from './components/PencilTrail'
 import Icon from './components/Icon'
 import { isOverdue } from './state/rollover'
 import { todayKey, dateKey, addDays } from './state/time'
@@ -190,6 +191,8 @@ export default function App() {
         onDone={() => setCelebration(null)}
       />
 
+      <PencilTrail enabled={!store.settings.reduceMotion} />
+
       <Guide open={showGuide} onClose={() => setShowGuide(false)} />
 
       <RightNow
@@ -204,7 +207,7 @@ export default function App() {
       <InputBar
         onAdd={store.addTask}
         view={view}
-        setView={setView}
+        setView={(v) => { setFocusDay(null); setView(v) }}
         onOpenSettings={() => setShowSettings(true)}
         onOpenGuide={() => setShowGuide(true)}
         onOpenAssistant={() => setShowAssistant(true)}

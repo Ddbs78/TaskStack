@@ -213,8 +213,14 @@ export default function Guide({ open, onClose }) {
     if (!open) return
     const saved = Number(localStorage.getItem('flow.guide.chapter') || 0)
     setActive(saved)
-    const el = scrollRef.current
-    if (el) requestAnimationFrame(() => { el.scrollTop = saved * 0.0001 })
+    if (!saved) return
+    // scroll to the remembered chapter's actual offset (the previous version
+    // multiplied the index by 0.0001, which never moved anything)
+    requestAnimationFrame(() => {
+      const el = scrollRef.current
+      const node = el?.querySelector(`#gch-${CHAPTERS[saved]?.id}`)
+      if (node) el.scrollTop = Math.max(0, node.offsetTop - 40)
+    })
   }, [open])
 
   useEffect(() => {

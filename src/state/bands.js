@@ -23,7 +23,11 @@ export const rankOf = (t) => (t.urgency == null ? NEUTRAL_URGENCY : t.urgency)
 // short tasks inflated to the minimum don't visually overlap their neighbours.
 export function packLanes(timed, dayWidth) {
   const minMin = dayWidth ? ((BAR_MIN_PX + BAR_GAP_PX) / dayWidth) * 1440 : 0
-  const sorted = [...timed].sort((a, b) => spanOf(a)[0] - spanOf(b)[0])
+  // Respect a hand-arranged column: re-sorting by start time here would silently
+  // throw away the order the user just dragged into place.
+  const sorted = hasManualOrder(timed)
+    ? [...timed]
+    : [...timed].sort((a, b) => spanOf(a)[0] - spanOf(b)[0])
   const laneEnds = []
   const out = []
   for (const t of sorted) {

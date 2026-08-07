@@ -7,7 +7,6 @@ import { dayBands, packLanes, OVERDUE_VISIBLE, applyManualOrder, hasManualOrder 
 import Sticker from './stickers/Sticker'
 import { pickWaiting } from './stickers/art'
 import { EmptyDayDoodle } from './Doodle'
-import OverduePile from './OverduePile'
 import CompletedSection from './CompletedSection'
 
 const PAST = 45
