@@ -23,12 +23,11 @@ export const rankOf = (t) => (t.urgency == null ? NEUTRAL_URGENCY : t.urgency)
 // short tasks inflated to the minimum don't visually overlap their neighbours.
 export function packLanes(timed, dayWidth) {
   const minMin = dayWidth ? ((BAR_MIN_PX + BAR_GAP_PX) / dayWidth) * 1440 : 0
-  const sorted = [...timed].sort((a, b) => (a.start ?? 0) - (b.start ?? 0))
+  const sorted = [...timed].sort((a, b) => spanOf(a)[0] - spanOf(b)[0])
   const laneEnds = []
   const out = []
   for (const t of sorted) {
-    const s = t.start ?? 0
-    const trueE = t.end != null && t.end > s ? t.end : s + 30
+    const [s, trueE] = spanOf(t)
     const e = Math.max(trueE, s + minMin)
     let lane = laneEnds.findIndex((end) => end <= s)
     if (lane === -1) { lane = laneEnds.length; laneEnds.push(e) }
@@ -45,6 +44,18 @@ export function sortOverdue(tasks, today = todayKey()) {
     if (r !== 0) return r
     return overdueDays(b, today) - overdueDays(a, today)
   })
+}
+
+// Untimed work is rendered as a bar spanning the whole day, so it shares one
+// lane system with timed work instead of living in a separate stack. This gives
+// it a virtual span; `anytime` on the task itself is untouched.
+export function withSpan(t) {
+  return t.start != null ? t : { ...t, _span: [0, 1440], _allDay: true }
+}
+export const spanOf = (t) => {
+  const s = t.start ?? 0
+  const e = t.end != null && t.end > s ? t.end : s + 30
+  return t.start == null ? [0, 1440] : [s, e]
 }
 
 // The four bands a day column renders, in visual order.

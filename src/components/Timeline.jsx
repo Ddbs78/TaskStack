@@ -3,7 +3,9 @@ import { AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
 import { addDays, dateKey, startOfDay, todayKey, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
-import { dayBands, packLanes } from '../state/bands'
+import { dayBands, packLanes, OVERDUE_VISIBLE } from '../state/bands'
+import Sticker from './stickers/Sticker'
+import { pickWaiting } from './stickers/art'
 import OverduePile from './OverduePile'
 import CompletedSection from './CompletedSection'
 
@@ -139,7 +141,14 @@ export default function Timeline({ store, now, onEdit, actions }) {
 function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, elapsedStyle, variant, calm, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
   const key = dateKey(date)
   const { overdue, timed, anytime, completed } = dayBands(store.tasks, key, today)
-  const { rows, laneCount } = packLanes(timed, dayWidth)
+  // ONE lane system: untimed work is a bar spanning the whole day, so it stacks
+  // alongside timed work instead of living in a separate band. The overdue cap
+  // still applies — full-span bars would otherwise swallow the column.
+  const shownOverdue = overdue.slice(0, OVERDUE_VISIBLE)
+  const hiddenOverdue = overdue.slice(OVERDUE_VISIBLE)
+  const bars = [...shownOverdue, ...anytime, ...timed]
+  const { rows, laneCount } = packLanes(bars, dayWidth)
+  const { Art, rest } = pickWaiting(key)
 
   return (
     <div
@@ -155,37 +164,34 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
 
       <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
         <div className="flex flex-col gap-3">
-          <OverduePile
-            tasks={overdue}
-            dayKey={key}
-            today={today}
-            nowMin={nowMin}
-            tintEnabled={tintEnabled}
-            elapsedStyle={elapsedStyle}
-            variant={variant}
-            calm={calm}
-            onToggle={onToggle}
-            onDelete={onDelete}
-            onEdit={onEdit}
-            onBump={onBump}
-          />
-
-          {timed.length > 0 && (
+          {bars.length > 0 && (
             <div className="relative" style={{ height: laneCount * 56 - 12 }}>
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
-                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle}
+                  <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant}
+                    nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} today={today}
                     onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
                 ))}
               </AnimatePresence>
             </div>
           )}
 
-          <AnimatePresence mode="popLayout" initial={false}>
-            {anytime.map((t) => (
-              <TaskCard key={t.id} task={t} today={today} nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} variant={variant} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
-            ))}
-          </AnimatePresence>
+          {hiddenOverdue.length > 0 && (
+            <div className="flex flex-col items-start gap-1 pl-1">
+              <Sticker Art={Art} rest={rest} size={64} calm={calm}
+                title={`${hiddenOverdue.length} still lurking`}
+                onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}>
+                <span className="text-[13px] font-bold" style={{ color: 'var(--text-soft)' }}>
+                  {hiddenOverdue.length} still lurking
+                </span>
+              </Sticker>
+              <button onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}
+                className="ml-1 rounded-full px-2 py-1 text-[12px] font-bold"
+                style={{ color: 'var(--text-faint)' }}>
+                bump &apos;em to tomorrow
+              </button>
+            </div>
+          )}
 
           <CompletedSection tasks={completed} onUncomplete={onUncomplete} compact />
         </div>

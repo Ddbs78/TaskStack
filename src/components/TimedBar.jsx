@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import Icon from './Icon'
 import { fracOf, fmtRange } from '../state/time'
-import { elapsedFraction, elapsedToday } from '../state/rollover'
+import { elapsedFraction, elapsedToday, overdueDays } from '../state/rollover'
+import { spanOf } from '../state/bands'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -52,10 +53,14 @@ const MIN_PX = 42         // min render width: fits the chevron + grabbable edge
 // (measured): circle+chevron → circle+clipped title+chevron → circle+full title.
 // Ends are drag-resizable (cursor swaps to ⟷ on the border; 15-min snap; signed
 // delta pill). Small bars open a task-tinted peek blob on hover.
-const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize, elapsedStyle = 'tint' }, ref) {
+const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize, elapsedStyle = 'tint', today }, ref) {
   const hatch = elapsedStyle === 'hatch'
-  const start = task.start ?? 0
-  const end = task.end != null && task.end > start ? task.end : start + 30
+  const [start, end] = spanOf(task)
+  const allDay = task.start == null           // untimed -> spans the whole day
+  const od = overdueDays(task, today)
+  // right-side tag: the overdue age, or ALL DAY. Replaces the label line that
+  // used to sit above each card, so untimed and timed read as one system.
+  const tag = od > 0 ? `${od} DAY${od > 1 ? 'S' : ''} AGO` : allDay ? 'ALL DAY' : null
   const left = fracOf(start) * 100
   const widthPct = (fracOf(end) - fracOf(start)) * 100
   const timePx = (widthPct / 100) * dayWidth
@@ -64,7 +69,7 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
 
   const passed = elapsedToday(task, nowMin) // fully elapsed today → "0 days overdue"
   const elapsed = passed ? 1 : tintEnabled ? elapsedFraction(task, nowMin) : 0
-  const hue = passed ? 'coral' : 'blue'
+  const hue = passed || od > 0 ? 'coral' : 'blue'
   const fillBg = tinted
     ? `color-mix(in srgb, var(--task-coral-tint-bg) ${elapsed * 100}%, var(--task-blue-tint-bg))`
     : `color-mix(in srgb, var(--task-coral-bg) ${elapsed * 100}%, var(--task-blue-bg))`
@@ -137,7 +142,7 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
       node.style.transition = prevT
       const s = clamp(snap15(next.start), 0, 1440), en = clamp(Math.max(s + 15, snap15(next.end)), 0, 1440)
       setDragging(null)
-      if (s !== origStart || en !== origEnd) onResize(task.id, { start: s, end: en })
+      if (s !== origStart || en !== origEnd) onResize(task.id, { start: s, end: en, anytime: false })
       else { node.style.left = ''; node.style.width = '' }
     }
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
@@ -200,6 +205,15 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
         )}
 
         {showText && <span className="relative z-[2] flex-1 truncate text-[14px] font-medium">{task.title}</span>}
+
+        {tag && showText && (
+          <span
+            className="relative z-[2] ml-auto shrink-0 text-[9px] font-extrabold tracking-wide"
+            style={{ opacity: 0.6 }}
+          >
+            {tag}
+          </span>
+        )}
 
         {showChevron && (
           <button
