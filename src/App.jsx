@@ -22,6 +22,7 @@ export default function App() {
   const store = useStore()
   const [now, setNow] = useNow(30000)
   const [view, setView] = useState('three')
+  const [focusDay, setFocusDay] = useState(null) // day a drill-down landed on
   const [bump, setBump] = useState(0) // forces re-derive at midnight
   const [showSettings, setShowSettings] = useState(false)
   const [showAssistant, setShowAssistant] = useState(false)
@@ -147,7 +148,7 @@ export default function App() {
           you just interacted with), leaving the whole app blank. A plain keyed
           crossfade mounts the incoming view immediately. The ErrorBoundary keys
           off `view`, so switching views also clears any error. */}
-      <main className="relative flex-1 overflow-hidden">
+      <main className="pencil relative flex-1 overflow-hidden">
         <ErrorBoundary resetKey={view}>
           <motion.div
             key={view}
@@ -156,7 +157,14 @@ export default function App() {
             transition={{ duration: 0.2 }}
             className="no-scrollbar h-full overflow-y-auto"
           >
-            <ViewComp store={store} now={now} onEdit={setEditing} actions={actions} />
+            <ViewComp
+              store={store}
+              now={now}
+              onEdit={setEditing}
+              actions={actions}
+              focusDay={focusDay}
+              onDrill={(nextView, dayKey) => { setFocusDay(dayKey); setView(nextView) }}
+            />
           </motion.div>
         </ErrorBoundary>
       </main>

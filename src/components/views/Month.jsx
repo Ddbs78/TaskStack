@@ -41,7 +41,7 @@ function MicroTimeline({ tasks, isToday, nowMin }) {
   )
 }
 
-export default function Month({ store, now, onEdit, actions }) {
+export default function Month({ store, now, onEdit, actions, onDrill }) {
   const today = todayKey()
   const variant = store.settings.taskStyle || 'filled'
   const tintEnabled = store.settings.overdueTint !== false
@@ -105,6 +105,7 @@ export default function Month({ store, now, onEdit, actions }) {
             <button
               key={k}
               onClick={() => setSelected(k)}
+              onDoubleClick={() => onDrill?.('week', k)}
               className="relative flex aspect-square flex-col gap-0.5 rounded-2xl p-1 text-left transition-colors sm:p-1.5"
               style={{
                 background: isSel ? 'var(--bg-soft)' : 'transparent',
@@ -155,9 +156,25 @@ export default function Month({ store, now, onEdit, actions }) {
 
       {/* selected-day drawer */}
       <div className="mt-5 pb-28">
-        <h3 className="mb-3 text-sm font-bold" style={{ color: 'var(--text-soft)' }}>
-          {keyToDate(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-        </h3>
+        <div className="mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-bold" style={{ color: 'var(--text-soft)' }}>
+            {keyToDate(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </h3>
+          <button
+            onClick={() => onDrill?.('week', selected)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)' }}
+          >
+            open this week ›
+          </button>
+          <button
+            onClick={() => onDrill?.('three', selected)}
+            className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)' }}
+          >
+            open this day ›
+          </button>
+        </div>
         <div className="flex flex-col gap-3">
           <AnimatePresence mode="popLayout" initial={false}>
             {selActive.map((t) => (

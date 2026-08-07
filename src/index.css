@@ -245,3 +245,20 @@ body {
   pointer-events: none;
   animation: nowFlip 2.2s ease-out forwards;
 }
+
+/* ---------------------------------------------------------------------------
+   Yellow pencil cursor. Scoped to the canvas and task surfaces only — inputs
+   keep their I-beam and the ↔ / ✥ affordances keep theirs, so the pencil never
+   overrides a control that's telling you what it does.
+--------------------------------------------------------------------------- */
+.pencil,
+.pencil button,
+.pencil a {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 32 32'%3E%3Cg transform='rotate(-8 16 16)'%3E%3Cpath d='M7 27l1.6-5.4 13.1-15.1a2.4 2.4 0 0 1 3.5-.2l1.4 1.2a2.4 2.4 0 0 1 .2 3.4L13.7 26z' fill='%23F5C542' stroke='%231b1b22' stroke-width='1.7' stroke-linejoin='round'/%3E%3Cpath d='M7 27l1.6-5.4 4 3.4z' fill='%23F2E4C0' stroke='%231b1b22' stroke-width='1.7' stroke-linejoin='round'/%3E%3Cpath d='M8.1 25.9l-.9 1.2 1.5-.4z' fill='%231b1b22'/%3E%3Cpath d='M19.6 8.9l4.9 4.2' stroke='%231b1b22' stroke-width='1.5'/%3E%3C/g%3E%3C/svg%3E") 5 26, pointer;
+}
+/* text entry and the specialised drag cursors always win */
+.pencil input,
+.pencil textarea { cursor: text; }
+.pencil .cursor-ew { cursor: inherit; }
+.pencil .cursor-move-4 { cursor: inherit; }
+.pencil .cursor-moving { cursor: grabbing; }

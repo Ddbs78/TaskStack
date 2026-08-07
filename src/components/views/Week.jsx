@@ -4,7 +4,7 @@ import Sticker from '../stickers/Sticker'
 import { pickWaiting } from '../stickers/art'
 import CompletedSection from '../CompletedSection'
 import Icon from '../Icon'
-import { addDays, dateKey, formatShort, startOfDay, todayKey, fmtTime, fmtRange, useIsMobile } from '../../state/time'
+import { addDays, dateKey, daysBetween, formatShort, startOfDay, todayKey, fmtTime, fmtRange, useIsMobile } from '../../state/time'
 import { dayBands, OVERDUE_VISIBLE } from '../../state/bands'
 import { elapsedFraction, elapsedToday } from '../../state/rollover'
 
@@ -41,7 +41,7 @@ function makeScale(heights) {
   }
 }
 
-export default function Week({ store, now, onEdit, actions }) {
+export default function Week({ store, now, onEdit, actions, focusDay, onDrill }) {
   const today = todayKey()
   const mobile = useIsMobile()
   const variant = store.settings.taskStyle || 'filled'
@@ -51,7 +51,12 @@ export default function Week({ store, now, onEdit, actions }) {
   const autoSize = store.settings.weekAutoSize !== false
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  const [offset, setOffset] = useState(0)
+  // a drill-down from Month lands here: start on the week containing focusDay
+  const [offset, setOffset] = useState(() => {
+    if (!focusDay) return 0
+    const diff = Math.floor(daysBetween(dateKey(startOfDay(now)), focusDay) / (7))
+    return diff
+  })
   const [expanded, setExpanded] = useState(null)
 
   const onToggle = actions?.complete || store.toggleTask
@@ -121,10 +126,14 @@ export default function Week({ store, now, onEdit, actions }) {
             const b = bands[i]
             return (
               <div key={keys[i]} className="min-w-0">
-                <div className="pb-1 text-center">
+                <button
+                  onClick={() => onDrill?.('three', keys[i])}
+                  className="w-full pb-1 text-center"
+                  title="open this day"
+                >
                   <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-faint)' }}>{s.wd}</div>
                   <div className="font-display text-[17px]" style={{ color: isToday ? 'var(--text)' : 'var(--text-soft)' }}>{s.day}</div>
-                </div>
+                </button>
                 {/* On days other than today, unscheduled work docks here, fused
                     to the top of the grid. Today's floats to the now-line instead. */}
                 {!isToday && (

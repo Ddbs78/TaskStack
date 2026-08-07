@@ -13,7 +13,7 @@ const PAST = 45
 const FUT = 45
 const LABELS = ['12a', '3a', '6a', '9a', '12p', '3p', '6p', '9p']
 
-export default function Timeline({ store, now, onEdit, actions }) {
+export default function Timeline({ store, now, onEdit, actions, focusDay }) {
   const today = todayKey()
   const mobile = useIsMobile()
   const variant = store.settings.taskStyle || 'filled'
@@ -56,10 +56,11 @@ export default function Timeline({ store, now, onEdit, actions }) {
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
-    const drift = daysBetween(baseKey, todayKey())
-    const col = PAST + drift
+    // a drill-down from Week/Month centres that day instead of today
+    const target = focusDay || todayKey()
+    const col = PAST + daysBetween(baseKey, target)
     el.scrollLeft = mobile ? col * dayWidth : (col - 1) * dayWidth
-  }, [dayWidth, mobile, baseKey, dayFlip])
+  }, [dayWidth, mobile, baseKey, dayFlip, focusDay])
 
   // The now-line is positioned IMPERATIVELY by a rAF loop writing style.left
   // directly — no CSS transition, so it's exact on the very first frame and can
