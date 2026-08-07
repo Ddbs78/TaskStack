@@ -58,6 +58,23 @@ export const spanOf = (t) => {
   return t.start == null ? [0, 1440] : [s, e]
 }
 
+// Manual order: once a day has been hand-arranged, sortIndex wins over the
+// derived ranking. Only tasks the user actually dragged carry one, so a day
+// reverts to ranked order the moment they're cleared.
+export function hasManualOrder(tasks) {
+  return tasks.some((t) => t.sortIndex != null)
+}
+export function applyManualOrder(list) {
+  if (!hasManualOrder(list)) return list
+  return [...list].sort((a, b) => {
+    const ai = a.sortIndex, bi = b.sortIndex
+    if (ai == null && bi == null) return 0
+    if (ai == null) return 1      // un-dragged items settle below dragged ones
+    if (bi == null) return -1
+    return ai - bi
+  })
+}
+
 // The four bands a day column renders, in visual order.
 export function dayBands(tasks, key, today = todayKey()) {
   const active = tasks.filter((t) => !t.done && displayDateKey(t, today) === key)

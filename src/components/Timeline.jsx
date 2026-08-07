@@ -3,9 +3,10 @@ import { AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
 import { addDays, dateKey, startOfDay, todayKey, daysBetween, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
-import { dayBands, packLanes, OVERDUE_VISIBLE } from '../state/bands'
+import { dayBands, packLanes, OVERDUE_VISIBLE, applyManualOrder, hasManualOrder } from '../state/bands'
 import Sticker from './stickers/Sticker'
 import { pickWaiting } from './stickers/art'
+import { EmptyDayDoodle } from './Doodle'
 import OverduePile from './OverduePile'
 import CompletedSection from './CompletedSection'
 
@@ -166,9 +167,24 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
   // still applies — full-span bars would otherwise swallow the column.
   const shownOverdue = overdue.slice(0, OVERDUE_VISIBLE)
   const hiddenOverdue = overdue.slice(OVERDUE_VISIBLE)
-  const bars = [...shownOverdue, ...anytime, ...timed]
+  const bars = applyManualOrder([...shownOverdue, ...anytime, ...timed])
   const { rows, laneCount } = packLanes(bars, dayWidth)
   const { Art, rest } = pickWaiting(key)
+  const manual = hasManualOrder(bars)
+
+  // Reorder writes an explicit sortIndex for the whole column, so the new order
+  // survives a reload and the reset chip has something concrete to clear.
+  const reorder = (id, lanesMoved) => {
+    const cur = bars.findIndex((t) => t.id === id)
+    if (cur < 0) return
+    const next = Math.max(0, Math.min(bars.length - 1, cur + lanesMoved))
+    if (next === cur) return
+    const arr = [...bars]
+    const [moved] = arr.splice(cur, 1)
+    arr.splice(next, 0, moved)
+    arr.forEach((t, i) => store.updateTask(t.id, { sortIndex: i }))
+  }
+  const resetOrder = () => bars.forEach((t) => store.updateTask(t.id, { sortIndex: null }))
 
   return (
     <div
@@ -180,6 +196,18 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
         style={{ color: isToday ? 'var(--text)' : 'var(--text-faint)', fontWeight: isToday ? 600 : 500 }}
       >
         {formatHeader(date)}
+        {manual && (
+          <button
+            onClick={resetOrder}
+            className="mx-auto mt-1 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)', border: '2px solid var(--ink)' }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F5D06B" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />
+            </svg>
+            back to ranked order
+          </button>
+        )}
       </div>
 
       <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
@@ -190,7 +218,7 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
                 {rows.map(({ task, lane }) => (
                   <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant}
                     nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} today={today}
-                    onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} />
+                    onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} onReorder={reorder} />
                 ))}
               </AnimatePresence>
             </div>
@@ -210,6 +238,15 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
                 style={{ color: 'var(--text-faint)' }}>
                 bump &apos;em to tomorrow
               </button>
+            </div>
+          )}
+
+          {bars.length === 0 && completed.length === 0 && (isToday || date > new Date()) && (
+            <div className="mt-6 flex flex-col items-center gap-1 opacity-70">
+              <EmptyDayDoodle width={110} />
+              <span className="text-[12px]" style={{ color: 'var(--text-faint)' }}>
+                {isToday ? 'nothing more today' : 'clear'}
+              </span>
             </div>
           )}
 

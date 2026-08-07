@@ -13,7 +13,7 @@ const RECUR = [
   { id: 'weekly', label: 'Weekly' },
 ]
 
-export default function SettingsModal({ open, onClose, store }) {
+export default function SettingsModal({ open, onClose, store, onOpenGuide }) {
   const { settings, setSettings } = store
 
   const requestNotifications = async (on) => {
@@ -41,6 +41,19 @@ export default function SettingsModal({ open, onClose, store }) {
               <h2 className="font-display text-2xl" style={{ color: 'var(--text)' }}>Settings</h2>
               <button onClick={onClose} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full" style={{ color: 'var(--text-faint)' }}><Icon name="x" size={20} /></button>
             </div>
+
+            <Section title="Getting around">
+              <button
+                onClick={() => { onClose(); onOpenGuide?.() }}
+                className="flex w-full items-center justify-between rounded-2xl px-4 py-3"
+                style={{ background: 'var(--surface-2)', border: '2px solid var(--ink)' }}
+              >
+                <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: 'var(--text)' }}>
+                  <Icon name="help" size={17} /> How this works
+                </span>
+                <Icon name="chevronRight" size={16} />
+              </button>
+            </Section>
 
             <Section title="Appearance">
               <Row label="Theme">

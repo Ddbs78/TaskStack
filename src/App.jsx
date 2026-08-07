@@ -14,6 +14,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import BrandMark from './components/BrandMark'
 import Celebration from './components/Celebration'
 import RightNow from './components/RightNow'
+import Guide from './components/Guide'
 import Icon from './components/Icon'
 import { isOverdue } from './state/rollover'
 import { todayKey, dateKey, addDays } from './state/time'
@@ -30,6 +31,7 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [celebration, setCelebration] = useState(null)
   const [showRightNow, setShowRightNow] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [logoTumble, setLogoTumble] = useState(false)
   const [logoLoose, setLogoLoose] = useState(false)
   const tapRef = useRef(0)
@@ -124,6 +126,12 @@ export default function App() {
             right now
           </button>
           <button
+            onClick={() => setShowGuide(true)}
+            className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: 'var(--text-soft)' }}
+            title="How this works"
+          ><Icon name="help" size={20} /></button>
+          <button
             onClick={() => setShowAssistant(true)}
             className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[var(--surface-2)]"
             style={{ color: 'var(--text-soft)' }}
@@ -182,6 +190,8 @@ export default function App() {
         onDone={() => setCelebration(null)}
       />
 
+      <Guide open={showGuide} onClose={() => setShowGuide(false)} />
+
       <RightNow
         open={showRightNow}
         onClose={() => setShowRightNow(false)}
@@ -196,12 +206,13 @@ export default function App() {
         view={view}
         setView={setView}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenGuide={() => setShowGuide(true)}
         onOpenAssistant={() => setShowAssistant(true)}
         defaultRecurrence={store.settings.recurringDefault}
       />
 
       <AssistantPanel open={showAssistant} onClose={() => setShowAssistant(false)} store={store} />
-      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} store={store} />
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} store={store} onOpenGuide={() => setShowGuide(true)} />
       {editing && <TaskEditor task={editing} onClose={() => setEditing(null)} store={store} />}
     </div>
   )

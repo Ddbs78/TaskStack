@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Icon from './Icon'
+import { DoneStamp } from './Doodle'
 
 // Collapsible "Completed (n)" disclosure, salvaged from the retired DayColumn
 // so Timeline / Week / Month all show finished work the same way.
@@ -50,6 +51,7 @@ export default function CompletedSection({ tasks, onUncomplete, compact = false 
                 >
                   {t.title}
                 </span>
+                <DoneStamp width={compact ? 56 : 68} />
               </div>
             ))}
           </motion.div>

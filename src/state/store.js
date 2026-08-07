@@ -66,6 +66,7 @@ function reducer(state, action) {
         // all" are different states and sort differently (see state/bands.js).
         urgency: action.urgency ?? null,
         urgencyOff: action.urgencyOff ?? false,
+        sortIndex: null, // set only when the user hand-arranges a day
         createdAt: Date.now(),
       }
       return { ...state, tasks: [...state.tasks, t] }

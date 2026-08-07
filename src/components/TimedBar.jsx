@@ -53,7 +53,7 @@ const MIN_PX = 42         // min render width: fits the chevron + grabbable edge
 // (measured): circle+chevron → circle+clipped title+chevron → circle+full title.
 // Ends are drag-resizable (cursor swaps to ⟷ on the border; 15-min snap; signed
 // delta pill). Small bars open a task-tinted peek blob on hover.
-const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize, elapsedStyle = 'tint', today }, ref) {
+const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 'filled', nowMin = 0, tintEnabled = true, onToggle, onDelete, onEdit, onResize, onReorder, elapsedStyle = 'tint', today }, ref) {
   const hatch = elapsedStyle === 'hatch'
   const [start, end] = spanOf(task)
   const allDay = task.start == null           // untimed -> spans the whole day
@@ -148,6 +148,53 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
   }
 
+  // ---- drag to reorder (vertical, via the grip) -------------------------------
+  // Horizontal edges already mean "resize", so reordering gets its own grip and
+  // its own axis. Imperative during the drag; commits a lane swap on release.
+  const onGripDown = (e) => {
+    if (!onReorder || e.button === 2) return
+    e.preventDefault(); e.stopPropagation()
+    clearTimeout(closeTimer.current); setPeek(null)
+    draggingRef.current = true
+    const node = localRef.current
+    const startY = e.clientY
+    const prevT = node.style.transition
+    const prevZ = node.style.zIndex
+    node.style.transition = 'none'
+    node.style.zIndex = '30'
+    node.style.boxShadow = '5px 8px 0 var(--ink-shadow)'
+    let lanesMoved = 0
+    const move = (ev) => {
+      const dy = ev.clientY - startY
+      lanesMoved = Math.round(dy / LANE)
+      node.style.transform = `translateY(${dy}px) rotate(${Math.max(-2.5, Math.min(2.5, dy / 40))}deg) scale(1.03)`
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up)
+      draggingRef.current = false
+      node.style.transition = prevT
+      node.style.zIndex = prevZ
+      node.style.transform = ''
+      node.style.boxShadow = ''
+      if (lanesMoved !== 0) onReorder(task.id, lanesMoved)
+    }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
+  }
+
+  const renderGrip = () => (
+    <span
+      onPointerDown={onGripDown}
+      className="relative z-[3] flex shrink-0 cursor-ns flex-col gap-[2px] opacity-0 transition-opacity group-hover:opacity-60"
+      style={{ touchAction: 'none' }}
+      aria-label="Reorder"
+      role="button"
+    >
+      <span style={{ width: 10, height: 1.6, background: 'currentColor' }} />
+      <span style={{ width: 10, height: 1.6, background: 'currentColor' }} />
+      <span style={{ width: 10, height: 1.6, background: 'currentColor' }} />
+    </span>
+  )
+
   // element-returning helper (NOT a component — that would remount mid-drag)
   const renderEdge = (edge) => (
     <div
@@ -191,6 +238,8 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
             }
           />
         )}
+
+        {onReorder && showText && renderGrip()}
 
         {showCircle && (
           <button
