@@ -231,6 +231,71 @@ body {
   overflow: visible;
 }
 
+/* ---------------------------------------------------------------------------
+   MODE LAYER — professional (default) vs personalized.
+
+   The rule that keeps this maintainable: professional mode is the ABSENCE of
+   the craft layer, expressed here in CSS, NOT a parallel set of components.
+   Every rule below neutralises something the hand-made layer added. If you
+   find yourself needing `mode === 'pro' ? <A/> : <B/>` for anything bigger
+   than a leaf node, the token approach was abandoned too early.
+
+   Professional is NOT a degraded fallback — it is the product's default face
+   and has its own deliberate design (hairline containment + a status rail,
+   tabular numerals, tighter geometry). See docs/TODO.md "Professional mode B".
+--------------------------------------------------------------------------- */
+[data-mode='professional'] {
+  /* neutralise the ink: containment becomes a hairline, not a drawn outline */
+  --ink: var(--hairline);
+  --ink-shadow: transparent;
+  --paper-grain: transparent;
+  /* professional geometry — tighter than the hand-made lane rhythm */
+  --bar-h: 30px;
+  --lane-h: 38px;
+  --radius-bar: 6px;
+  --radius-surface: 10px;
+}
+[data-mode='personalized'] {
+  --bar-h: 44px;
+  --lane-h: 56px;
+  --radius-bar: 13px;
+  --radius-surface: 16px;
+}
+
+/* ink surfaces collapse to a hairline; the coloured status rail on the leading
+   edge carries the task's identity instead of a heavy border */
+[data-mode='professional'] .inked,
+[data-mode='professional'] .inked-sm {
+  border: 1px solid var(--hairline);
+  box-shadow: none;
+}
+
+/* no paper grain on the canvas */
+[data-mode='professional'] body,
+body[data-mode='professional'] { background-image: none; }
+
+/* marker rules straighten into hairlines */
+[data-mode='professional'] .marker-rule { height: 1px; margin-top: 4px; background: var(--hairline); }
+[data-mode='professional'] .marker-rule > * { display: none; }
+
+/* Gridlines off. Professional B refuses lines entirely — but the timeline still
+   needs a readable time axis, so removing them is NOT a pure subtraction: the
+   day-column wash below plus the tick axis at the foot carry that job instead.
+   (Deliberate design decision, approved — see docs/TODO.md.) */
+[data-mode='professional'] .timeline-grid { background-image: none; }
+[data-mode='professional'] .day-wash:nth-child(even) { background: color-mix(in srgb, var(--text) 2.2%, transparent); }
+
+/* tabular numerals everywhere numbers matter — a Console-mode signature */
+[data-mode='professional'] .tabular,
+[data-mode='professional'] time { font-variant-numeric: tabular-nums; }
+
+/* professional keeps functional motion only: no spring overshoot anywhere.
+   The now-line still glides and views still crossfade — those are the product,
+   not decoration. Decorative motion is switched off at the component level. */
+[data-mode='professional'] {
+  --ease-spring: cubic-bezier(.22,.61,.36,1);
+}
+
 /* midnight wrap: the now-line pulses as it crosses into a new day */
 @keyframes nowFlip {
   0%   { opacity: 0; transform: translateX(-50%) scaleY(0.2); }

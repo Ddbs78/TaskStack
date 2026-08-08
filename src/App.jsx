@@ -92,6 +92,9 @@ export default function App() {
     document.documentElement.style.setProperty('--motion', store.settings.reduceMotion ? '0' : '1')
   }, [store.settings.reduceMotion])
 
+  // The whole hand-made layer hangs off this one flag. Professional is default.
+  const personalized = store.settings.mode === 'personalized'
+
   const overdueCount = store.tasks.filter((t) => isOverdue(t, todayKey())).length
 
   const ViewComp = { three: Timeline, week: Week, month: Month }[view]
@@ -160,7 +163,7 @@ export default function App() {
           you just interacted with), leaving the whole app blank. A plain keyed
           crossfade mounts the incoming view immediately. The ErrorBoundary keys
           off `view`, so switching views also clears any error. */}
-      <main className="pencil relative flex-1 overflow-hidden">
+      <main className={`relative flex-1 overflow-hidden ${personalized ? 'pencil' : ''}`}>
         <ErrorBoundary resetKey={view}>
           <motion.div
             key={view}
@@ -194,7 +197,8 @@ export default function App() {
         onDone={() => setCelebration(null)}
       />
 
-      <PencilTrail enabled={!store.settings.reduceMotion} />
+      {/* the graphite trail is part of the pencil metaphor — personalized only */}
+      <PencilTrail enabled={personalized && !store.settings.reduceMotion} />
 
       <Guide open={showGuide} onClose={() => setShowGuide(false)} />
 

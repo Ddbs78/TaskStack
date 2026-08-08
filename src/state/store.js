@@ -29,8 +29,13 @@ function loadTasks() {
 }
 
 export const DEFAULT_SETTINGS = {
+  // The app's visual personality. Professional is the DEFAULT face — a new
+  // user lands here. Personalized is the opt-in hand-made layer.
+  // One component tree drives both; see index.css `[data-mode]`.
+  mode: 'professional', // professional | personalized
+  onboarded: false, // first-run intro plays once, then never again unless replayed
   theme: 'dark',
-  taskStyle: 'filled', // filled | tinted
+  taskStyle: 'filled', // filled | tinted — solid blocks vs translucent tints
   overdueTint: true, // legacy on/off flag, kept so existing saved settings keep working
   elapsedStyle: 'tint', // off | tint | hatch — how elapsed time reads on today's tasks
   notifications: false,
@@ -121,6 +126,10 @@ export function useStore() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings))
     document.documentElement.setAttribute('data-theme', state.settings.theme)
+    // data-mode drives the whole craft layer from CSS — see index.css. Doing it
+    // here (rather than per-component) is what keeps professional mode the
+    // ABSENCE of the hand-made layer instead of a second set of components.
+    document.documentElement.setAttribute('data-mode', state.settings.mode || 'professional')
   }, [state.settings])
 
   const api = {

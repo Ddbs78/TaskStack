@@ -13,7 +13,7 @@ const RECUR = [
   { id: 'weekly', label: 'Weekly' },
 ]
 
-export default function SettingsModal({ open, onClose, store, onOpenGuide }) {
+export default function SettingsModal({ open, onClose, store, onOpenGuide, onReplayIntro }) {
   const { settings, setSettings } = store
 
   const requestNotifications = async (on) => {
@@ -53,9 +53,40 @@ export default function SettingsModal({ open, onClose, store, onOpenGuide }) {
                 </span>
                 <Icon name="chevronRight" size={16} />
               </button>
+              {/* The intro plays once on first launch and never again — this is
+                  the only way back to it. */}
+              <button
+                onClick={() => { onClose(); onReplayIntro?.() }}
+                className="mt-2 flex w-full items-center justify-between rounded-2xl px-4 py-3"
+                style={{ background: 'var(--surface-2)', border: '2px solid var(--ink)' }}
+              >
+                <span className="flex items-center gap-2 text-[15px] font-bold" style={{ color: 'var(--text)' }}>
+                  <Icon name="sparkles" size={17} /> Replay the intro
+                </span>
+                <Icon name="chevronRight" size={16} />
+              </button>
             </Section>
 
             <Section title="Appearance">
+              {/* The headline setting — it changes the app's whole face, so it
+                  sits first and gets a fuller explanation than the rest. */}
+              <Row
+                label="Mode"
+                hint={
+                  settings.mode === 'personalized'
+                    ? 'Hand-drawn: ink outlines, paper grain, a pencil cursor and a cast of characters'
+                    : 'Clean and uniform. Motion only where it means something'
+                }
+              >
+                <Segmented
+                  value={settings.mode || 'professional'}
+                  options={[
+                    { id: 'professional', label: 'Professional' },
+                    { id: 'personalized', label: 'Personalized' },
+                  ]}
+                  onChange={(v) => setSettings({ mode: v })}
+                />
+              </Row>
               <Row label="Theme">
                 <Segmented
                   value={settings.theme}
@@ -66,10 +97,10 @@ export default function SettingsModal({ open, onClose, store, onOpenGuide }) {
                   onChange={(v) => setSettings({ theme: v })}
                 />
               </Row>
-              <Row label="Task style" hint="Bold blocks or soft tints">
+              <Row label="Task blocks" hint="Solid fills or translucent tints">
                 <Segmented
                   value={settings.taskStyle}
-                  options={[{ id: 'filled', label: 'Filled' }, { id: 'tinted', label: 'Tinted' }]}
+                  options={[{ id: 'filled', label: 'Solid' }, { id: 'tinted', label: 'Translucent' }]}
                   onChange={(v) => setSettings({ taskStyle: v })}
                 />
               </Row>
