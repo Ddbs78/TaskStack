@@ -5,11 +5,13 @@ import MarkerRule from './MarkerRule'
 import { createPortal } from 'react-dom'
 import { fmtRange, fmtTime, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
+import { flashComplete, PencilUnderline } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
 
-// Evaporating-pop exit + squeeze-in entrance.
+// Evaporating-pop exit + squeeze-in entrance. Professional keeps the state
+// change legible but drops the pop and the spring's overshoot.
 const variants = {
   initial: { opacity: 0, scale: 0.8, y: 8, filter: 'blur(6px)' },
   animate: { opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' },
@@ -20,9 +22,16 @@ const variants = {
     transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] },
   },
 }
+const proVariants = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
+}
+const SPRING = { type: 'spring', stiffness: 520, damping: 34, mass: 0.7 }
+const EASED = { duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }
 
 const TaskCard = forwardRef(function TaskCard(
-  { task, onToggle, onDelete, onEdit, onResize, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true, elapsedStyle = 'tint' },
+  { task, onToggle, onDelete, onEdit, onResize, variant = 'filled', today = todayKey(), nowMin = 0, tintEnabled = true, elapsedStyle = 'tint', personalized = true },
   ref
 ) {
   const hatch = elapsedStyle === 'hatch'
@@ -40,15 +49,12 @@ const TaskCard = forwardRef(function TaskCard(
     : elapsed > 0
     ? `color-mix(in srgb, var(--coral-strong) ${elapsed * 100}%, var(--blue-strong))`
     : 'var(--blue-strong)'
-  const cardStyle = tinted
-    ? {
-        background: `var(--task-${hue}-tint-bg)`,
-        color: `var(--task-${hue}-tint-text)`,
-      }
-    : {
-        background: `var(--task-${hue}-bg)`,
-        color: `var(--task-${hue}-text)`,
-      }
+  // Same declaration, two readings — see the .task-surface block in index.css.
+  const cardStyle = {
+    '--rail': hue === 'coral' ? 'var(--coral)' : 'var(--blue)',
+    background: tinted ? `var(--bar-bg, var(--task-${hue}-tint-bg))` : `var(--bar-bg, var(--task-${hue}-bg))`,
+    color: tinted ? `var(--bar-fg, var(--task-${hue}-tint-text))` : `var(--bar-fg, var(--task-${hue}-text))`,
+  }
   const [pressing, setPressing] = useState(false)
   const timer = useRef(null)
   const startPt = useRef(null)
@@ -146,11 +152,11 @@ const TaskCard = forwardRef(function TaskCard(
     <motion.div
       ref={ref}
       layout
-      variants={variants}
+      variants={personalized ? variants : proVariants}
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.7 }}
+      transition={personalized ? SPRING : EASED}
       whileTap={{ scale: 0.985 }}
       className="select-none"
       style={{ touchAction: 'pan-y' }}
@@ -172,9 +178,10 @@ const TaskCard = forwardRef(function TaskCard(
         onPointerMove={movePress}
         onPointerUp={cancelPress}
         onPointerLeave={cancelPress}
-        className="inked group relative flex h-[44px] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4"
+        className="inked task-surface group relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] px-4"
         style={{
           ...cardStyle,
+          height: 'var(--card-h)',
           outline: pressing ? '2px solid var(--now-line)' : undefined,
           outlineOffset: pressing ? '2px' : undefined,
           transform: pressing ? 'scale(0.97)' : undefined,
@@ -189,7 +196,7 @@ const TaskCard = forwardRef(function TaskCard(
             than half-rendered. */}
         {elapsed > 0 && (
           <div
-            className="pointer-events-none absolute inset-y-0 left-0 z-0"
+            className="elapsed-fill pointer-events-none absolute inset-y-0 left-0 z-0"
             style={
               hatch
                 ? {
@@ -197,7 +204,7 @@ const TaskCard = forwardRef(function TaskCard(
                     backgroundImage:
                       'repeating-linear-gradient(115deg, color-mix(in srgb, var(--task-coral-text) 30%, transparent) 0 2px, transparent 2px 7px)',
                   }
-                : { width: `${elapsed * 100}%`, background: fillBg }
+                : { width: `${elapsed * 100}%`, background: `var(--bar-elapsed, ${fillBg})` }
             }
           />
         )}
@@ -206,9 +213,8 @@ const TaskCard = forwardRef(function TaskCard(
         <button
           aria-label={`Complete ${task.title}`}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onToggle(task.id) }}
-          className="relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-transform active:scale-90"
-          style={{ borderColor: 'currentColor' }}
+          onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
+          className="bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-transform active:scale-90"
         >
           <motion.span
             initial={false}
@@ -236,13 +242,16 @@ const TaskCard = forwardRef(function TaskCard(
         {task.recurrence && task.recurrence !== 'none' && (
           <Icon name="repeat" size={15} stroke={2} className="opacity-70" />
         )}
+
+        {/* #6 — pencil underline on hover */}
+        <PencilUnderline />
       </div>
 
       {tip && tip.label && createPortal(
         <div
           className="pointer-events-none fixed z-[70] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl px-3 text-[12px] font-semibold tabular-nums"
           style={{ left: tip.x, top: tip.y, height: 26, lineHeight: '26px',
-                   background: 'var(--surface-2)', color: 'var(--text)', border: '2px solid var(--ink)' }}
+                   background: 'var(--surface-2)', color: 'var(--text)', border: 'var(--ink-w) solid var(--ink)' }}
         >
           {tip.label}
         </div>,

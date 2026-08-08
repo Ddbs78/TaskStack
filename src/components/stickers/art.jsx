@@ -1,3 +1,11 @@
+// The app's illustrative layer — BOTH modes.
+//
+// Most of this file is the hand-drawn die-cut sticker cast (personalized only).
+// It also holds the two things that had to live somewhere shared: the paper
+// note stack that replaces the sticker character in professional mode, and
+// `flashComplete`, the completion mark, which is drawn by every surface that
+// owns a checkbox.
+//
 // Hand-drawn die-cut sticker characters.
 //
 // These deliberately sit OUTSIDE the theme token system — the colours are
@@ -8,6 +16,8 @@
 //
 // Every character takes `hovered` and nudges one or two of its own details in
 // response, so the reaction feels characterful rather than a generic scale-up.
+
+import { useState } from 'react'
 
 const CREAM = '#FFF8EE'
 const BLUSH = '#F58FA8'
@@ -161,4 +171,189 @@ export function pickWaiting(seed = '') {
   let h = 0
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
   return WAITING[(h + SESSION_SALT) % WAITING.length]
+}
+
+const prefersReduced = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// ---------------------------------------------------------------------------
+// PROFESSIONAL: the paper note stack.
+//
+// Same job as the sticker — hold the overflow the cap hides and offer the
+// escape valve in one tap — with no character in it. Three real notes, each
+// with its own edge and shadow; the top one carries the count. Rest / fan on
+// hover / tilt-and-sweep when cleared, all in CSS (see .note-stack).
+// ---------------------------------------------------------------------------
+export function PaperNoteStack({ count = 0, label, calm = false, width = 128, height = 40, onClick, title }) {
+  const [gone, setGone] = useState(false)
+  const still = calm || prefersReduced()
+
+  const fire = () => {
+    if (gone) return
+    if (still || !onClick) { onClick?.(); return }
+    // let the pile tilt away before the data changes underneath it
+    setGone(true)
+    setTimeout(() => onClick(), 260)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={fire}
+      title={title}
+      aria-label={title}
+      className={`note-stack${gone ? ' is-gone' : ''}${still ? ' calm' : ''}`}
+      style={{ '--ns-w': `${width}px`, '--ns-h': `${height}px` }}
+    >
+      <span className="note n-3" aria-hidden="true"><span className="n-lines"><i /><i /></span></span>
+      <span className="note n-2" aria-hidden="true"><span className="n-lines"><i /><i /></span></span>
+      <span className="note n-1"><span className="n-count">{label ?? count}</span></span>
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// The completion mark.
+//
+// It is spawned into <body> imperatively instead of rendered inside the task,
+// because completing a task UNMOUNTS its bar (dayBands moves it straight to
+// `completed`) — a mark drawn inside the bar gets cut off mid-stroke.
+//
+// Driven by rAF writing attributes, NOT by a CSS/WAAPI animation: it has to
+// advance in a harness that freezes document.timeline, and it must never lean
+// on React state (Constitution III). The SVG is built once; only attributes
+// change per frame.
+//
+//   professional — Apple-Pay: ring sweeps, disc fills, check draws, 3% settle.
+//   personalized — the same beat, drawn scratchily stroke by stroke.
+// ---------------------------------------------------------------------------
+const RING_LEN = 131.95 // 2πr, r = 21
+const CHK_LEN = 27.4
+const easeOut = (x) => 1 - Math.pow(1 - x, 3)
+const seg = (t, a, b) => (t <= a ? 0 : t >= b ? 1 : easeOut((t - a) / (b - a)))
+
+const AP_SVG = `<svg viewBox="0 0 48 48" width="100%" height="100%" style="display:block;transform-origin:50% 50%">
+  <circle cx="24" cy="24" r="21" fill="var(--success)" opacity="0"/>
+  <circle cx="24" cy="24" r="21" fill="none" stroke="var(--success)" stroke-width="3" stroke-linecap="round"
+    stroke-dasharray="${RING_LEN}" stroke-dashoffset="${RING_LEN}" transform="rotate(-90 24 24)"/>
+  <path d="M15 24.5 L21.5 31 L33.5 17.5" fill="none" stroke="#0d2b21" stroke-width="3.6"
+    stroke-linecap="round" stroke-linejoin="round"
+    stroke-dasharray="${CHK_LEN}" stroke-dashoffset="${CHK_LEN}"/>
+</svg>`
+
+const SCRATCH_SVG = `<svg viewBox="0 0 24 24" width="100%" height="100%" style="display:block;transform-origin:50% 50%">
+  <path d="M4.5 12.8 C 6.4 14.2, 8.1 16.1, 9.6 18.2" fill="none" stroke="var(--success)" stroke-width="2.9"
+    stroke-linecap="round" stroke-dasharray="9" stroke-dashoffset="9"/>
+  <path d="M9.6 18.2 C 12.6 13.4, 16.1 9.1, 20 5.6" fill="none" stroke="var(--success)" stroke-width="2.9"
+    stroke-linecap="round" stroke-dasharray="18" stroke-dashoffset="18"/>
+  <path d="M5.6 13.6 C 7.2 15.2, 8.4 16.6, 9.4 17.9" fill="none" stroke="var(--success)" stroke-width="1"
+    stroke-linecap="round" opacity="0"/>
+</svg>`
+
+const DUR = 620
+const HOLD = 240
+const FADE = 220
+
+export function flashComplete(anchor, { personalized = false, calm = false } = {}) {
+  if (typeof document === 'undefined' || !anchor?.getBoundingClientRect) return
+  const r = anchor.getBoundingClientRect()
+  if (!r.width) return
+  const size = personalized ? 30 : 32
+  const host = document.createElement('div')
+  host.setAttribute('aria-hidden', 'true')
+  host.style.cssText =
+    `position:fixed;left:${r.left + r.width / 2 - size / 2}px;top:${r.top + r.height / 2 - size / 2}px;` +
+    `width:${size}px;height:${size}px;z-index:80;pointer-events:none`
+  host.innerHTML = personalized ? SCRATCH_SVG : AP_SVG
+  document.body.appendChild(host)
+
+  const svg = host.firstElementChild
+  const [a, b, c] = svg.children
+  const still = calm || prefersReduced()
+
+  const draw = (t) => {
+    if (personalized) {
+      a.setAttribute('stroke-dashoffset', ((1 - seg(t, 0.08, 0.52)) * 9).toFixed(2))
+      b.setAttribute('stroke-dashoffset', ((1 - seg(t, 0.42, 0.94)) * 18).toFixed(2))
+      c.setAttribute('opacity', (seg(t, 0.5, 1) * 0.55).toFixed(3))
+      svg.style.transform = `scale(${(0.8 + 0.2 * seg(t, 0, 0.35)).toFixed(3)})`
+    } else {
+      a.setAttribute('opacity', seg(t, 0.24, 0.53).toFixed(3))
+      b.setAttribute('stroke-dashoffset', ((1 - seg(t, 0, 0.31)) * RING_LEN).toFixed(2))
+      c.setAttribute('stroke-dashoffset', ((1 - seg(t, 0.45, 0.84)) * CHK_LEN).toFixed(2))
+      // a 3% settle at the tail — a scale-down to rest, never an overshoot
+      svg.style.transform = `scale(${(t < 0.84 ? 1 : 1.03 - 0.03 * seg(t, 0.84, 1)).toFixed(3)})`
+    }
+  }
+
+  const done = () => host.remove()
+  if (still) {
+    draw(1)
+    setTimeout(done, 420)
+    return
+  }
+
+  draw(0)
+  const t0 = performance.now()
+  let raf = 0
+  const tick = (now) => {
+    const e = now - t0
+    const t = Math.min(1, e / DUR)
+    draw(t)
+    if (e > DUR + HOLD) host.style.opacity = String(Math.max(0, 1 - (e - DUR - HOLD) / FADE))
+    if (e >= DUR + HOLD + FADE) { done(); return }
+    raf = requestAnimationFrame(tick)
+  }
+  raf = requestAnimationFrame(tick)
+  // rAF stops in a backgrounded tab; without this the node would linger forever
+  setTimeout(() => { cancelAnimationFrame(raf); done() }, DUR + HOLD + FADE + 900)
+}
+
+// ---------------------------------------------------------------------------
+// The hand-drawn details (personalized only — each is rendered inside a
+// .craft-only wrapper or gated by [data-mode='personalized'] in index.css).
+// ---------------------------------------------------------------------------
+
+// #2 — the Completed drawer tears off the column instead of ending on a rule.
+// One deterministic path: it should look torn once, not restless.
+export function TearEdge() {
+  return (
+    <svg className="tear-edge craft-only" viewBox="0 0 200 9" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d="M0 6 L8 3 L15 6.5 L23 2.5 L31 6 L40 3.5 L47 7 L56 3 L64 6.5 L73 2.5 L81 6 L90 4 L98 7 L107 3
+           L115 6.5 L124 3 L132 6 L141 4 L149 7 L158 3.5 L166 6.5 L175 3 L183 6 L192 4 L200 6.5 L200 9 L0 9 Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+// #4 — page-corner fold: the column turns up its own corner when there is more
+// below the fold. Visibility is driven by `.has-more` on the parent.
+export function CornerFold() {
+  return (
+    <svg className="corner-fold craft-only" viewBox="0 0 34 34" aria-hidden="true">
+      <path d="M34 4 L34 34 L4 34 Z" fill="var(--bg)" />
+      <path d="M34 4 C 25 11, 16 21, 4 34" fill="none" stroke="var(--ink)" strokeWidth="2" opacity=".9" />
+      <path d="M34 4 C 27 8, 20 15, 13 23" fill="none" stroke="var(--text-faint)" strokeWidth="1.1" opacity=".55" />
+      <path d="M31 9 C 25 14, 19 21, 12 29" fill="none" stroke="var(--text-faint)" strokeWidth=".8" opacity=".3" />
+    </svg>
+  )
+}
+
+// #6 — the pencil underline sketched under a task title on hover.
+export function PencilUnderline() {
+  return (
+    <svg className="pencil-ul" viewBox="0 0 120 5" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d="M1 3.2 C 18 1.6, 34 4.2, 52 2.4 S 88 4, 104 2.2 L 118 3"
+        fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity=".75"
+      />
+      <path
+        d="M3 4 C 22 2.6, 40 4.6, 60 3.2 S 96 4.4, 116 3.4"
+        fill="none" stroke="currentColor" strokeWidth=".9" strokeLinecap="round" opacity=".4"
+      />
+    </svg>
+  )
 }

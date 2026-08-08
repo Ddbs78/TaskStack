@@ -46,6 +46,7 @@ export default function Month({ store, now, onEdit, actions, onDrill }) {
   const variant = store.settings.taskStyle || 'filled'
   const tintEnabled = store.settings.overdueTint !== false
   const calm = !!store.settings.reduceMotion
+  const personalized = store.settings.mode === 'personalized'
   const nowMin = now.getHours() * 60 + now.getMinutes()
   const [selected, setSelected] = useState(today)
   const [offset, setOffset] = useState(0) // months from the current one
@@ -106,10 +107,10 @@ export default function Month({ store, now, onEdit, actions, onDrill }) {
               key={k}
               onClick={() => setSelected(k)}
               onDoubleClick={() => onDrill?.('week', k)}
-              className="relative flex aspect-square flex-col gap-0.5 rounded-2xl p-1 text-left transition-colors sm:p-1.5"
+              className="relative flex aspect-square flex-col gap-0.5 rounded-[var(--radius-card)] p-1 text-left transition-colors sm:p-1.5"
               style={{
                 background: isSel ? 'var(--bg-soft)' : 'transparent',
-                outline: isToday ? '2px solid var(--coral-strong)' : 'none',
+                outline: isToday ? 'var(--ink-w) solid var(--coral-strong)' : 'none',
                 opacity: inMonth ? 1 : 0.35,
               }}
             >
@@ -185,6 +186,7 @@ export default function Month({ store, now, onEdit, actions, onDrill }) {
                 nowMin={nowMin}
                 tintEnabled={tintEnabled}
                 variant={variant}
+                personalized={personalized}
                 onToggle={onToggle}
                 onDelete={onDelete}
                 onEdit={onEdit}
@@ -194,8 +196,11 @@ export default function Month({ store, now, onEdit, actions, onDrill }) {
 
           {selActive.length === 0 && (
             <div className="flex flex-col items-center gap-1 py-6">
-              <Sticker Art={Art} rest={rest} size={76} calm={calm} />
-              <span className="text-sm" style={{ color: 'var(--text-faint)' }}>nothing scheduled — enjoy it</span>
+              {/* no `paper` — this is decorative, so professional renders nothing */}
+              <Sticker Art={Art} rest={rest} size={76} calm={calm} personalized={personalized} />
+              <span className="text-sm" style={{ color: 'var(--text-faint)' }}>
+                {personalized ? 'nothing scheduled — enjoy it' : 'Nothing scheduled'}
+              </span>
             </div>
           )}
 

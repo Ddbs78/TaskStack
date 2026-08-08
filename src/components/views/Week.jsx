@@ -7,6 +7,7 @@ import Icon from '../Icon'
 import { addDays, dateKey, daysBetween, formatShort, startOfDay, todayKey, fmtTime, fmtRange, useIsMobile } from '../../state/time'
 import { dayBands, OVERDUE_VISIBLE } from '../../state/bands'
 import { elapsedFraction, elapsedToday } from '../../state/rollover'
+import { flashComplete } from '../stickers/art'
 
 // Six 4-hour segments cover the whole day with no scrolling. Tapping one opens
 // it to hourly detail while its neighbours fold up, so total height never
@@ -48,6 +49,7 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
   const elapsedStyle = store.settings.elapsedStyle || (store.settings.overdueTint === false ? 'off' : 'tint')
   const tintEnabled = elapsedStyle !== 'off'
   const calm = !!store.settings.reduceMotion
+  const personalized = store.settings.mode === 'personalized'
   const autoSize = store.settings.weekAutoSize !== false
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
@@ -141,6 +143,7 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
                     bands={b}
                     dayKey={keys[i]}
                     calm={calm}
+                    personalized={personalized}
                     variant={variant}
                     onToggle={onToggle}
                     onEdit={onEdit}
@@ -202,6 +205,7 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
               elapsedStyle={elapsedStyle}
               variant={variant}
               calm={calm}
+              personalized={personalized}
               onToggle={onToggle}
               onDelete={onDelete}
               onEdit={onEdit}
@@ -237,7 +241,7 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
 }
 
 // ---- one day column ---------------------------------------------------------
-function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, elapsedStyle, variant, calm, onToggle, onDelete, onEdit, onUncomplete, onBump }) {
+function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, elapsedStyle, variant, calm, personalized, onToggle, onDelete, onEdit, onUncomplete, onBump }) {
   const { overdue, timed, anytime, completed } = bands
   const unscheduled = [...overdue, ...anytime]
 
@@ -272,22 +276,24 @@ function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, el
             onClick={() => onEdit?.(task)}
             onContextMenu={(ev) => { ev.preventDefault(); onDelete(task.id) }}
             title={`${task.title} · ${fmtRange(task.start, task.end)}`}
-            className="inked-sm absolute overflow-hidden rounded-[9px] px-1.5 text-left"
+            className="inked-sm task-surface absolute overflow-hidden px-1.5 text-left"
             style={{
               top, height: h, left: 2, right: 2,
+              borderRadius: 'var(--radius-bar)',
               transition: calm ? 'none' : 'top .42s var(--ease-spring), height .42s var(--ease-spring)',
-              background: tinted ? `var(--task-${hue}-tint-bg)` : `var(--task-${hue}-bg)`,
-              color: tinted ? `var(--task-${hue}-tint-text)` : `var(--task-${hue}-text)`,
-              outline: strong ? '2px solid var(--coral-strong)' : 'none',
+              '--rail': hue === 'coral' ? 'var(--coral)' : 'var(--blue)',
+              background: tinted ? `var(--bar-bg, var(--task-${hue}-tint-bg))` : `var(--bar-bg, var(--task-${hue}-bg))`,
+              color: tinted ? `var(--bar-fg, var(--task-${hue}-tint-text))` : `var(--bar-fg, var(--task-${hue}-text))`,
+              outline: strong ? 'var(--ink-w) solid var(--coral-strong)' : 'none',
             }}
           >
             {elapsed > 0 && !passed && (
               <span
-                className="pointer-events-none absolute inset-x-0 top-0 z-0"
+                className="elapsed-fill elapsed-y pointer-events-none absolute inset-x-0 top-0 z-0"
                 style={
                   elapsedStyle === 'hatch'
                     ? { height: `${elapsed * 100}%`, backgroundImage: 'repeating-linear-gradient(115deg, color-mix(in srgb, currentColor 30%, transparent) 0 2px, transparent 2px 7px)' }
-                    : { height: `${elapsed * 100}%`, background: 'color-mix(in srgb, var(--task-coral-bg) 65%, transparent)' }
+                    : { height: `${elapsed * 100}%`, background: 'var(--bar-elapsed, color-mix(in srgb, var(--task-coral-bg) 65%, transparent))' }
                 }
               />
             )}
@@ -312,17 +318,21 @@ function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, el
           {floatMode === 'tag' ? (
             <Sticker
               Art={Art} rest={rest} size={30} calm={calm}
+              personalized={personalized}
+              paper={unscheduled.length}
+              paperLabel={`${unscheduled.length}`}
+              paperWidth={40} paperHeight={22}
               title={`${unscheduled.length} unscheduled`}
               onClick={() => onEdit?.(unscheduled[0])}
               className="rounded-full px-1.5 py-0.5"
-              style={{ background: 'var(--surface-2)', border: '2px solid var(--ink)' }}
+              style={{ background: 'var(--surface-2)', border: 'var(--ink-w) solid var(--ink)' }}
             >
               <span className="text-[9px] font-bold" style={{ color: 'var(--coral-strong)' }}>{unscheduled.length}</span>
             </Sticker>
           ) : (
             <div className="flex flex-col gap-1">
               {unscheduled.slice(0, floatMode === 'dodge' ? 1 : 2).map((t) => (
-                <MiniChip key={t.id} task={t} overdue={overdue.includes(t)} variant={variant} onToggle={onToggle} onEdit={onEdit} />
+                <MiniChip key={t.id} task={t} overdue={overdue.includes(t)} variant={variant} personalized={personalized} onToggle={onToggle} onEdit={onEdit} />
               ))}
               {unscheduled.length > (floatMode === 'dodge' ? 1 : 2) && (
                 <button
@@ -348,7 +358,7 @@ function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, el
 }
 
 // ---- docked unscheduled band (non-today columns) -----------------------------
-function DockedUnscheduled({ bands, dayKey, calm, variant, onToggle, onEdit, onBump }) {
+function DockedUnscheduled({ bands, dayKey, calm, personalized, variant, onToggle, onEdit, onBump }) {
   const items = [...bands.overdue, ...bands.anytime]
   if (!items.length) return <div style={{ height: 6 }} />
   const shown = items.slice(0, OVERDUE_VISIBLE)
@@ -357,16 +367,22 @@ function DockedUnscheduled({ bands, dayKey, calm, variant, onToggle, onEdit, onB
   return (
     <div
       className="mb-0.5 flex flex-col gap-1 p-1"
-      style={{ background: 'color-mix(in srgb, var(--text) 4%, transparent)', border: '2px solid var(--ink)', borderBottom: 'none', borderRadius: '8px 8px 2px 2px' }}
+      style={{ background: 'color-mix(in srgb, var(--text) 4%, transparent)', border: 'var(--ink-w) solid var(--ink)', borderBottom: 'none', borderRadius: '8px 8px 2px 2px' }}
     >
       {shown.map((t) => (
-        <MiniChip key={t.id} task={t} overdue={bands.overdue.includes(t)} variant={variant} onToggle={onToggle} onEdit={onEdit} />
+        <MiniChip key={t.id} task={t} overdue={bands.overdue.includes(t)} variant={variant} personalized={personalized} onToggle={onToggle} onEdit={onEdit} />
       ))}
       <AnimatePresence>
         {hidden.length > 0 && (
           <Sticker
             key="pile" Art={Art} rest={rest} size={28} calm={calm}
-            title={`${hidden.length} still lurking — bump to tomorrow`}
+            personalized={personalized}
+            paper={hidden.length}
+            paperLabel={`+${hidden.length}`}
+            paperWidth={52} paperHeight={24}
+            title={personalized
+              ? `${hidden.length} still lurking — bump to tomorrow`
+              : `${hidden.length} more overdue — move to tomorrow`}
             onClick={() => onBump?.(hidden.map((t) => t.id))}
             className="justify-center"
           >
@@ -378,22 +394,22 @@ function DockedUnscheduled({ bands, dayKey, calm, variant, onToggle, onEdit, onB
   )
 }
 
-function MiniChip({ task, overdue, variant, onToggle, onEdit }) {
+function MiniChip({ task, overdue, variant, personalized = true, onToggle, onEdit }) {
   const tinted = variant === 'tinted'
   const hue = overdue ? 'coral' : 'blue'
   return (
     <div
-      className="inked-sm flex items-center gap-1 rounded-md px-1 py-0.5"
+      className="inked-sm task-surface relative flex items-center gap-1 rounded-md px-1 py-0.5"
       style={{
-        background: tinted ? `var(--task-${hue}-tint-bg)` : `var(--task-${hue}-bg)`,
-        color: tinted ? `var(--task-${hue}-tint-text)` : `var(--task-${hue}-text)`,
+        '--rail': hue === 'coral' ? 'var(--coral)' : 'var(--blue)',
+        background: tinted ? `var(--bar-bg, var(--task-${hue}-tint-bg))` : `var(--bar-bg, var(--task-${hue}-bg))`,
+        color: tinted ? `var(--bar-fg, var(--task-${hue}-tint-text))` : `var(--bar-fg, var(--task-${hue}-text))`,
       }}
     >
       <button
         aria-label={`Complete ${task.title}`}
-        onClick={(e) => { e.stopPropagation(); onToggle(task.id) }}
-        className="grid h-[10px] w-[10px] shrink-0 place-items-center rounded-full border-[1.5px]"
-        style={{ borderColor: 'currentColor' }}
+        onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
+        className="bar-check grid h-[10px] w-[10px] shrink-0 place-items-center rounded-full border-[1.5px]"
       />
       <button onClick={() => onEdit?.(task)} className="min-w-0 flex-1 truncate text-left text-[10px] font-bold">
         {task.title}

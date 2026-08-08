@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { PaperNoteStack } from './art'
 
 // Motion wrapper shared by every sticker. The art is dumb SVG; all the life
 // lives here so the characters move as one family.
@@ -7,6 +8,16 @@ import { motion, useReducedMotion } from 'framer-motion'
 // When motion is calmed (OS preference OR Settings → Reduce motion) the sticker
 // still sits at its rest angle — it just stops moving. It never disappears,
 // because the character IS the affordance.
+//
+// MODE FORK — the one the mode contract explicitly allows. Professional has no
+// sticker characters, and the capped-overdue overflow is genuinely different
+// CONTENT there (a stack of paper notes), not the same content restyled. Doing
+// the swap here means every call site stays identical: Timeline, Week and Month
+// all just render <Sticker> and get whichever affordance the mode calls for.
+//
+//   `paper` — the overflow count. Present = this sticker is a capped pile, so
+//   professional renders the note stack. Absent (e.g. Month's empty state) =
+//   decorative, so professional renders nothing at all.
 export default function Sticker({
   Art,
   rest = 0,
@@ -17,10 +28,30 @@ export default function Sticker({
   children,
   className = '',
   style,
+  personalized = true,
+  paper = null,
+  paperLabel,
+  paperWidth = 128,
+  paperHeight = 40,
 }) {
   const prefersReduced = useReducedMotion()
   const still = calm || prefersReduced
   const [hovered, setHovered] = useState(false)
+
+  if (!personalized) {
+    if (paper == null) return null
+    return (
+      <PaperNoteStack
+        count={paper}
+        label={paperLabel}
+        calm={still}
+        width={paperWidth}
+        height={paperHeight}
+        onClick={onClick}
+        title={title}
+      />
+    )
+  }
 
   const variants = still
     ? {
@@ -74,10 +105,13 @@ export default function Sticker({
     >
       {/* barely-there breathing so it reads as alive, not stamped on */}
       <motion.span
-        className="inline-flex"
+        className="relative inline-flex"
         animate={still ? undefined : { rotate: [0, 1.5, 0, -1.5, 0] }}
         transition={still ? undefined : { duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
       >
+        {/* #3 washi tape — only on the capped pile, so the character reads as
+            taped to the timeline rather than floating over it. */}
+        {paper != null && <span className="washi" aria-hidden="true" />}
         <Art size={size} hovered={hovered} />
       </motion.span>
       {children}

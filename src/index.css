@@ -21,6 +21,19 @@
   --radius-blob: 16px;
   --radius-input: 10px;
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Mode geometry defaults. These MATCH PROFESSIONAL on purpose: store.js
+     stamps [data-mode] from a useEffect, i.e. after the first paint, so for one
+     frame nothing matches [data-mode='…']. Defaulting to the app's default face
+     means that frame is correct rather than 44px-tall and inked. */
+  --bar-h: 30px;
+  --lane-h: 38px;
+  --card-h: 36px;
+  --radius-bar: 6px;
+  --radius-surface: 10px;
+  --ink-w: 1px;
+  --cb: 14px;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 }
 
 [data-theme='dark'] {
@@ -205,13 +218,14 @@ button { cursor: pointer; }
 [data-theme='dark']  { --ink: #14141a; --ink-shadow: rgba(0,0,0,.45); --paper-grain: rgba(255,248,238,.032); }
 [data-theme='light'] { --ink: #1b1b22; --ink-shadow: rgba(27,27,34,.22); --paper-grain: rgba(27,27,34,.022); }
 
-/* inked task surfaces */
+/* inked task surfaces. Width comes from --ink-w so the mode layer can thin the
+   outline to a hairline without a second rule per component. */
 .inked {
-  border: 2px solid var(--ink);
+  border: var(--ink-w) solid var(--ink);
   box-shadow: 2.5px 3px 0 var(--ink-shadow);
 }
 .inked-sm {
-  border: 2px solid var(--ink);
+  border: var(--ink-w) solid var(--ink);
   box-shadow: 2px 2.5px 0 var(--ink-shadow);
 }
 
@@ -248,18 +262,39 @@ body {
   /* neutralise the ink: containment becomes a hairline, not a drawn outline */
   --ink: var(--hairline);
   --ink-shadow: transparent;
+  --ink-w: 1px;
   --paper-grain: transparent;
   /* professional geometry — tighter than the hand-made lane rhythm */
   --bar-h: 30px;
   --lane-h: 38px;
+  --card-h: 36px;
+  /* 6px, NOT the 16px of Constitution §9. The user approved Professional B
+     ("Console") as shown, and the deviation is load-bearing: at a 30px bar a
+     16px radius eats the whole edge and the density reads as sloppy instead of
+     deliberate. Do not "fix" this back to 16. */
   --radius-bar: 6px;
   --radius-surface: 10px;
+  --radius-card: var(--radius-surface);
+  /* Console refuses gridlines outright; the alternating column wash and the
+     tick axis at the foot carry the time reading instead. */
+  --timeline-grid: transparent;
+  --timeline-boundary: transparent;
+  --cb: 14px;                                   /* checkbox edge */
+  --drag-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.45);
+  --drag-tilt: 0;                               /* no rotation while dragging */
 }
 [data-mode='personalized'] {
+  --ink-w: 2px;
   --bar-h: 44px;
   --lane-h: 56px;
+  --card-h: 44px;
   --radius-bar: 13px;
   --radius-surface: 16px;
+  --timeline-grid: var(--grid-line);
+  --timeline-boundary: var(--grid-boundary);
+  --cb: 16px;
+  --drag-shadow: 5px 8px 0 var(--ink-shadow);
+  --drag-tilt: 1;
 }
 
 /* ink surfaces collapse to a hairline; the coloured status rail on the leading
@@ -270,24 +305,131 @@ body {
   box-shadow: none;
 }
 
-/* no paper grain on the canvas */
-[data-mode='professional'] body,
-body[data-mode='professional'] { background-image: none; }
+/* ---------------------------------------------------------------------------
+   THE TASK SURFACE — one element, two readings.
+
+   Personalized: the body carries the hue behind a 2px ink outline.
+   Professional B: a 1px hairline surface barely washed with the hue, and a 2px
+   status rail on the leading edge carrying the identity the outline used to.
+
+   Components emit `background: var(--bar-bg, <their own colour>)` etc., so this
+   block is the ONLY place the professional reading is decided — no component
+   branches on the mode.
+--------------------------------------------------------------------------- */
+[data-mode='professional'] .task-surface {
+  --bar-bg: color-mix(in srgb, var(--rail) 9%, var(--surface));
+  --bar-fg: var(--text);
+  --bar-elapsed: color-mix(in srgb, var(--coral) 15%, transparent);
+  --bar-shadow: none;
+  border: 1px solid var(--hairline);
+}
+[data-mode='professional'] .task-surface::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--rail);
+  z-index: 3;
+  pointer-events: none;
+}
+/* hover swaps the row background; nothing moves */
+[data-mode='professional'] .task-surface:hover { --bar-bg: var(--surface-2); }
+[data-mode='professional'] .bar-title { font-size: 12px; }
+[data-mode='professional'] .bar-tag { color: var(--rail); opacity: 1; font-weight: 700; }
+/* the elapsed block gets an edge so "how far in" reads without a colour shift.
+   Week fills top-down instead of left-right, hence the .elapsed-y variant. */
+[data-mode='professional'] .elapsed-fill {
+  border-right: 1px solid color-mix(in srgb, var(--coral) 42%, transparent);
+}
+[data-mode='professional'] .elapsed-fill.elapsed-y {
+  border-right: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--coral) 42%, transparent);
+}
+/* checkbox: circle → small square, tinted by the rail it belongs to */
+.bar-check { border-color: currentColor; }
+[data-mode='professional'] .bar-check { border-radius: 3px; border-color: var(--rail); }
+
+/* ---------------------------------------------------------------------------
+   DAY HEADER — the same four spans in both modes; each mode shows its two.
+   Personalized: a centred hand-set name with a marker swash under today.
+   Professional B: a dense row — weekday, date, live task count — on its own
+   surface, with today marked by a coral underscore.
+--------------------------------------------------------------------------- */
+.day-head-row { display: flex; align-items: center; justify-content: center; }
+.dh-dow, .dh-num, .dh-count { display: none; }
+[data-mode='professional'] .day-head { padding: 0; margin-bottom: 6px; }
+[data-mode='professional'] .day-head-row {
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+}
+[data-mode='professional'] .dh-name { display: none; }
+[data-mode='professional'] .dh-dow {
+  display: inline; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint);
+}
+[data-mode='professional'] .dh-num {
+  display: inline; font-size: 11px; font-weight: 600; color: var(--text-soft);
+}
+[data-mode='professional'] .dh-count {
+  display: inline; margin-left: auto; font-size: 10px; font-weight: 600;
+  color: var(--text-faint); background: var(--surface-2);
+  border-radius: 4px; padding: 1px 5px;
+}
+[data-mode='professional'] .day-wash.is-today .day-head-row { box-shadow: inset 0 -2px 0 var(--coral); }
+[data-mode='professional'] .day-wash.is-today .dh-dow { color: var(--text); }
+/* the swash marks today — a hairline under every header is not the same idea */
+[data-mode='professional'] .day-head .marker-rule { display: none; }
+
+/* content that only exists in one mode. Use sparingly — styling belongs in the
+   token blocks above; this is for art that has no professional equivalent. */
+[data-mode='professional'] .craft-only { display: none !important; }
+[data-mode='personalized'] .pro-only { display: none !important; }
+
+/* now-line: same object, quieter chrome. The pill becomes a left-anchored flag
+   in mono so the running clock never reflows the column. */
+[data-mode='professional'] .nowline-bar { width: 1px; }
+[data-mode='professional'] .nowline-pill {
+  left: 0; transform: none; border-radius: 0 3px 3px 0;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.03em; padding: 2px 5px;
+}
+
+/* completed drawer. Sentence case is kept (Constitution §9) — the only approved
+   deviation from B-as-mocked is the 6px bar radius, not the uppercase header. */
+.completed-tick { background: var(--success); color: #06352a; }
+[data-mode='professional'] .completed-head { font-size: 11px; letter-spacing: 0.04em; }
+[data-mode='professional'] .completed-row { border-radius: 5px; }
+[data-mode='professional'] .completed-tick {
+  border-radius: 3px; background: transparent;
+  border: 1px solid var(--success); color: var(--success);
+}
 
 /* marker rules straighten into hairlines */
 [data-mode='professional'] .marker-rule { height: 1px; margin-top: 4px; background: var(--hairline); }
 [data-mode='professional'] .marker-rule > * { display: none; }
 
+/* no paper grain on the canvas */
+[data-mode='professional'] body,
+body[data-mode='professional'] { background-image: none; }
+
 /* Gridlines off. Professional B refuses lines entirely — but the timeline still
    needs a readable time axis, so removing them is NOT a pure subtraction: the
    day-column wash below plus the tick axis at the foot carry that job instead.
-   (Deliberate design decision, approved — see docs/TODO.md.) */
+   (Deliberate design decision, approved — see docs/TODO.md.)
+   The timeline's own gradients are painted from --timeline-grid /
+   --timeline-boundary, which the mode block sets to transparent. */
 [data-mode='professional'] .timeline-grid { background-image: none; }
 [data-mode='professional'] .day-wash:nth-child(even) { background: color-mix(in srgb, var(--text) 2.2%, transparent); }
+[data-mode='professional'] .day-wash.is-today { background: color-mix(in srgb, var(--text) 4%, transparent); }
 
 /* tabular numerals everywhere numbers matter — a Console-mode signature */
 [data-mode='professional'] .tabular,
 [data-mode='professional'] time { font-variant-numeric: tabular-nums; }
+[data-mode='professional'] .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 /* professional keeps functional motion only: no spring overshoot anywhere.
    The now-line still glides and views still crossfade — those are the product,
@@ -295,6 +437,122 @@ body[data-mode='professional'] { background-image: none; }
 [data-mode='professional'] {
   --ease-spring: cubic-bezier(.22,.61,.36,1);
 }
+
+/* ---------------------------------------------------------------------------
+   PAPER NOTE STACK — professional's capped-overdue overflow.
+
+   The sticker character's job done literally. Every note carries its own edge
+   and its own shadow: one card with a drop shadow reads as a card, not a pile,
+   and the pile is the whole point (three notes = three tasks you can't see).
+   Three states — at rest, hover (fans), cleared (tilts and sweeps right).
+--------------------------------------------------------------------------- */
+.note-stack {
+  position: relative;
+  display: block;
+  width: var(--ns-w, 128px);
+  height: var(--ns-h, 40px);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+.note-stack .note {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-surface);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--coral) 15%, var(--surface)),
+    color-mix(in srgb, var(--coral) 24%, var(--surface))
+  );
+  border: 1px solid color-mix(in srgb, var(--coral) 46%, transparent);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.16), 0 6px 14px -9px rgba(0, 0, 0, 0.5);
+  transition: transform 0.34s cubic-bezier(0.2, 0.9, 0.25, 1), opacity 0.34s,
+    filter 0.34s, box-shadow 0.34s;
+}
+.note-stack .n-3 { transform: translate(6px, 6px) rotate(2.2deg); }
+.note-stack .n-2 { transform: translate(3px, 3px) rotate(-1.4deg); }
+.note-stack .n-1 { display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+.note-stack:hover .n-3 { transform: translate(22px, 2px) rotate(10deg); }
+.note-stack:hover .n-2 { transform: translate(-13px, 5px) rotate(-6.5deg); }
+.note-stack:hover .n-1 {
+  transform: translateY(-5px) rotate(1.2deg);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18), 0 14px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.note-stack.is-gone .n-3 { transform: translate(120px, -16px) rotate(26deg); opacity: 0; filter: blur(2px); }
+.note-stack.is-gone .n-2 { transform: translate(148px, -9px) rotate(19deg); opacity: 0.12; filter: blur(1.4px); }
+.note-stack.is-gone .n-1 { transform: translate(176px, -4px) rotate(14deg); opacity: 0.28; filter: blur(0.8px); }
+.note-stack .n-lines { position: absolute; left: 11px; right: 13px; top: 10px; opacity: 0.5; }
+.note-stack .n-lines i {
+  display: block; height: 2px; border-radius: 2px; margin-bottom: 5px;
+  background: color-mix(in srgb, var(--coral) 55%, transparent);
+}
+.note-stack .n-count {
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--coral-strong) 78%, var(--text));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* motion is gated on the OS preference AND Settings → reduce motion */
+.note-stack.calm .note { transition: none; }
+@media (prefers-reduced-motion: reduce) { .note-stack .note { transition: none; } }
+
+/* ---------------------------------------------------------------------------
+   HAND-DRAWN DETAILS — personalized only. Each one is invisible in
+   professional because it is only ever rendered inside a .craft-only wrapper
+   or gated by [data-mode='personalized'] here.
+--------------------------------------------------------------------------- */
+
+/* #6 pencil underline: hovering a task sketches a line under its title */
+.pencil-ul {
+  position: absolute;
+  left: 34px;
+  right: 44px;
+  bottom: 5px;
+  height: 5px;
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.13s ease;
+}
+[data-mode='personalized'] .task-surface:hover > .pencil-ul { opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) { .pencil-ul { transition: none; } }
+
+/* #2 torn paper edge on the Completed drawer */
+.tear-edge { display: block; width: 100%; height: 9px; color: var(--hairline); }
+
+/* #3 washi tape — the overdue sticker reads as taped down, not floating */
+.washi {
+  position: absolute;
+  left: -6px;
+  top: -7px;
+  width: 54px;
+  height: 17px;
+  transform: rotate(-11deg);
+  background: repeating-linear-gradient(
+    115deg,
+    rgba(245, 208, 107, 0.62) 0 5px,
+    rgba(245, 208, 107, 0.42) 5px 10px
+  );
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  clip-path: polygon(3% 0, 97% 4%, 100% 96%, 2% 100%, 0 52%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* #4 page-corner fold — appears only while the column has more below */
+.corner-fold {
+  position: absolute;
+  right: 0;
+  bottom: 40px;          /* clear of the tick axis that overlays the column foot */
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.has-more > .corner-fold { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .corner-fold { transition: none; } }
 
 /* midnight wrap: the now-line pulses as it crosses into a new day */
 @keyframes nowFlip {

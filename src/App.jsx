@@ -15,6 +15,7 @@ import BrandMark from './components/BrandMark'
 import Celebration from './components/Celebration'
 import RightNow from './components/RightNow'
 import Guide from './components/Guide'
+import Onboarding from './components/Onboarding/Onboarding'
 import PencilTrail from './components/PencilTrail'
 import Icon from './components/Icon'
 import { isOverdue } from './state/rollover'
@@ -33,6 +34,9 @@ export default function App() {
   const [celebration, setCelebration] = useState(null)
   const [showRightNow, setShowRightNow] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  // settings load synchronously from localStorage, so the first render already
+  // knows whether the intro is owed. Skipping counts as done — see Onboarding.
+  const [showIntro, setShowIntro] = useState(() => !store.settings.onboarded)
   const [logoTumble, setLogoTumble] = useState(false)
   const [logoLoose, setLogoLoose] = useState(false)
   const tapRef = useRef(0)
@@ -222,7 +226,15 @@ export default function App() {
       />
 
       <AssistantPanel open={showAssistant} onClose={() => setShowAssistant(false)} store={store} />
-      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} store={store} onOpenGuide={() => setShowGuide(true)} />
+      <SettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        store={store}
+        onOpenGuide={() => setShowGuide(true)}
+        onReplayIntro={() => setShowIntro(true)}
+      />
+
+      <Onboarding open={showIntro} store={store} onFinish={() => setShowIntro(false)} />
       {editing && <TaskEditor task={editing} onClose={() => setEditing(null)} store={store} />}
     </div>
   )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Icon from './Icon'
 import { DoneStamp } from './Doodle'
+import { TearEdge } from './stickers/art'
 
 // Collapsible "Completed (n)" disclosure, salvaged from the retired DayColumn
 // so Timeline / Week / Month all show finished work the same way.
@@ -10,10 +11,12 @@ export default function CompletedSection({ tasks, onUncomplete, compact = false 
   if (!tasks.length) return null
 
   return (
-    <div className="mt-1">
+    <div className="relative mt-1">
+      {/* #2 — the drawer tears off the column instead of ending on a rule */}
+      <TearEdge />
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 px-1 py-1 text-[13px] font-semibold"
+        className="completed-head flex w-full items-center gap-1.5 px-1 py-1 text-[13px] font-semibold"
         style={{ color: 'var(--text-faint)' }}
       >
         <Icon
@@ -34,14 +37,13 @@ export default function CompletedSection({ tasks, onUncomplete, compact = false 
             {tasks.map((t) => (
               <div
                 key={t.id}
-                className={`flex items-center gap-3 rounded-[var(--radius-card)] px-4 ${compact ? 'py-2' : 'py-3'}`}
+                className={`completed-row flex items-center gap-3 rounded-[var(--radius-card)] px-4 ${compact ? 'py-2' : 'py-3'}`}
                 style={{ background: 'var(--completed-bg)', opacity: 0.75 }}
               >
                 <button
                   aria-label={`Uncomplete ${t.title}`}
                   onClick={() => onUncomplete(t.id)}
-                  className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
-                  style={{ background: 'var(--success)', color: '#06352a' }}
+                  className="completed-tick grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full"
                 >
                   <Icon name="check" size={12} stroke={2.4} />
                 </button>
@@ -51,7 +53,7 @@ export default function CompletedSection({ tasks, onUncomplete, compact = false 
                 >
                   {t.title}
                 </span>
-                <DoneStamp width={compact ? 56 : 68} />
+                <span className="craft-only shrink-0"><DoneStamp width={compact ? 56 : 68} /></span>
               </div>
             ))}
           </motion.div>

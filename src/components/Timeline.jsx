@@ -2,10 +2,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
-import { addDays, dateKey, startOfDay, todayKey, daysBetween, formatHeader, useIsMobile, nowFraction, fmtTime } from '../state/time'
+import { addDays, dateKey, startOfDay, todayKey, daysBetween, formatHeader, formatShort, useIsMobile, nowFraction, fmtTime } from '../state/time'
 import { dayBands, packLanes, OVERDUE_VISIBLE, applyManualOrder, hasManualOrder } from '../state/bands'
 import Sticker from './stickers/Sticker'
-import { pickWaiting } from './stickers/art'
+import { pickWaiting, CornerFold } from './stickers/art'
+import MarkerRule from './MarkerRule'
 import { EmptyDayDoodle } from './Doodle'
 import CompletedSection from './CompletedSection'
 
@@ -30,6 +31,7 @@ export default function Timeline({ store, now, onEdit, actions, focusDay }) {
   const onUncomplete = actions?.uncomplete || store.toggleTask
   const onBump = actions?.bump
   const calm = !!store.settings.reduceMotion
+  const personalized = store.settings.mode === 'personalized'
 
   const baseKey = dateKey(startOfDay(now))
   const days = useMemo(() => {
@@ -103,10 +105,14 @@ export default function Timeline({ store, now, onEdit, actions, focusDay }) {
   const nowContentX = PAST * dayWidth + nowFraction(now) * dayWidth
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
+  // Painted from --timeline-grid / --timeline-boundary, NOT --grid-line: the
+  // mode layer sets both to transparent in professional (Console refuses
+  // gridlines) while --grid-line itself must stay live for Week's segment rules
+  // and Month's micro-strip track.
   const gridBg = {
     backgroundImage:
-      `repeating-linear-gradient(to right, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent ${dayWidth / 8}px),` +
-      `repeating-linear-gradient(to right, var(--grid-boundary) 0, var(--grid-boundary) 1px, transparent 1px, transparent ${dayWidth}px)`,
+      `repeating-linear-gradient(to right, var(--timeline-grid) 0, var(--timeline-grid) 1px, transparent 1px, transparent ${dayWidth / 8}px),` +
+      `repeating-linear-gradient(to right, var(--timeline-boundary) 0, var(--timeline-boundary) 1px, transparent 1px, transparent ${dayWidth}px)`,
   }
 
   return (
@@ -142,6 +148,7 @@ export default function Timeline({ store, now, onEdit, actions, focusDay }) {
                 elapsedStyle={elapsedStyle}
                 variant={variant}
                 calm={calm}
+                personalized={personalized}
                 onEdit={onEdit}
                 onToggle={onToggle}
                 onDelete={onDelete}
@@ -158,7 +165,7 @@ export default function Timeline({ store, now, onEdit, actions, focusDay }) {
   )
 }
 
-function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, elapsedStyle, variant, calm, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
+function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEnabled, elapsedStyle, variant, calm, personalized, onEdit, onToggle, onDelete, onUncomplete, onBump }) {
   const key = dateKey(date)
   const { overdue, timed, anytime, completed } = dayBands(store.tasks, key, today)
   // ONE lane system: untimed work is a bar spanning the whole day, so it stacks
@@ -185,21 +192,56 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
   }
   const resetOrder = () => bars.forEach((t) => store.updateTask(t.id, { sortIndex: null }))
 
+  // #4 — the page-corner fold marks "there's more below". Written straight onto
+  // the DOM node (a class toggle, no state) so it costs nothing per column and
+  // can't trigger a render mid-scroll. 91 columns exist; only a handful are ever
+  // scrollable at once.
+  const scrollRef = useRef(null)
+  const syncMore = () => {
+    const el = scrollRef.current
+    if (!el) return
+    const more = el.scrollHeight - el.clientHeight - el.scrollTop > 6
+    el.parentElement?.classList.toggle('has-more', more)
+  }
+  useLayoutEffect(syncMore, [bars.length, completed.length, laneCount, dayWidth])
+
+  const short = formatShort(date)
+  const count = bars.length + hiddenOverdue.length
+
   return (
     <div
-      className="relative flex h-full flex-col"
+      className={`day-wash relative flex h-full flex-col${isToday ? ' is-today' : ''}`}
       style={{ width: dayWidth, scrollSnapAlign: mobile ? 'center' : 'none' }}
     >
-      <div
-        className="font-display mb-2 px-2 pt-1 text-center text-[clamp(14px,2vw,24px)]"
-        style={{ color: isToday ? 'var(--text)' : 'var(--text-faint)', fontWeight: isToday ? 600 : 500 }}
-      >
-        {formatHeader(date)}
+      {/* One header, four spans. Personalized shows the hand-set name (plus a
+          marker swash under today); professional shows weekday · date · live
+          count. Which pair is visible is decided in index.css, not here. */}
+      <div className="day-head mb-2 px-2 pt-1">
+        <div className="day-head-row">
+          <span className="dh-dow">{short.wd}</span>
+          <span
+            className="dh-name font-display text-[clamp(14px,2vw,24px)]"
+            style={{ color: isToday ? 'var(--text)' : 'var(--text-faint)', fontWeight: isToday ? 600 : 500 }}
+          >
+            {formatHeader(date)}
+          </span>
+          <span className="dh-num tabular">{short.day}</span>
+          {count > 0 && <span className="dh-count tabular">{count}</span>}
+        </div>
+
+        {/* #5 — today's header gets a marker swash; other days stay plain, which
+            is what makes the swash mean "today" at all. */}
+        {isToday && (
+          <span className="craft-only mx-auto block w-[70%]">
+            <MarkerRule color="var(--coral)" seed={2} opacity={0.75} />
+          </span>
+        )}
+
         {manual && (
           <button
             onClick={resetOrder}
             className="mx-auto mt-1 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)', border: '2px solid var(--ink)' }}
+            style={{ background: 'var(--surface-2)', color: 'var(--text-soft)', border: 'var(--ink-w) solid var(--ink)' }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F5D06B" strokeWidth="2.6" strokeLinecap="round">
               <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />
@@ -209,14 +251,17 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
         )}
       </div>
 
-      <div className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
+      <div ref={scrollRef} onScroll={syncMore} className="no-scrollbar slot-fade relative flex-1 overflow-y-auto pb-24">
         <div className="flex flex-col gap-3">
           {bars.length > 0 && (
-            <div className="relative" style={{ height: laneCount * 56 - 12 }}>
+            // Height comes from the same vars the bars are painted with, so the
+            // container can never disagree with the lane rhythm inside it.
+            <div className="relative" style={{ height: `calc(${laneCount} * var(--lane-h) - (var(--lane-h) - var(--bar-h)))` }}>
               <AnimatePresence initial={false}>
                 {rows.map(({ task, lane }) => (
                   <TimedBar key={task.id} task={task} dayWidth={dayWidth} lane={lane} variant={variant}
                     nowMin={nowMin} tintEnabled={tintEnabled} elapsedStyle={elapsedStyle} today={today}
+                    personalized={personalized}
                     onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onResize={store.updateTask} onReorder={reorder} />
                 ))}
               </AnimatePresence>
@@ -226,7 +271,11 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
           {hiddenOverdue.length > 0 && (
             <div className="flex flex-col items-start gap-1 pl-1">
               <Sticker Art={Art} rest={rest} size={64} calm={calm}
-                title={`${hiddenOverdue.length} still lurking`}
+                personalized={personalized}
+                paper={hiddenOverdue.length}
+                paperLabel={`${hiddenOverdue.length} more overdue`}
+                paperWidth={Math.min(168, dayWidth - 32)}
+                title={personalized ? `${hiddenOverdue.length} still lurking` : `${hiddenOverdue.length} more overdue`}
                 onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}>
                 <span className="text-[13px] font-bold" style={{ color: 'var(--text-soft)' }}>
                   {hiddenOverdue.length} still lurking
@@ -235,16 +284,16 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
               <button onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}
                 className="ml-1 rounded-full px-2 py-1 text-[12px] font-bold"
                 style={{ color: 'var(--text-faint)' }}>
-                bump &apos;em to tomorrow
+                {personalized ? "bump 'em to tomorrow" : 'Move to tomorrow'}
               </button>
             </div>
           )}
 
           {bars.length === 0 && completed.length === 0 && (isToday || date > new Date()) && (
             <div className="mt-6 flex flex-col items-center gap-1 opacity-70">
-              <EmptyDayDoodle width={110} />
+              <span className="craft-only"><EmptyDayDoodle width={110} /></span>
               <span className="text-[12px]" style={{ color: 'var(--text-faint)' }}>
-                {isToday ? 'nothing more today' : 'clear'}
+                {isToday ? 'Nothing more today' : 'Clear'}
               </span>
             </div>
           )}
@@ -252,6 +301,11 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
           <CompletedSection tasks={completed} onUncomplete={onUncomplete} compact />
         </div>
       </div>
+
+      {/* sibling of the scroller, not a child: absolute-inside-a-scroller pins
+          to the bottom of the CONTENT, which is exactly where "more below"
+          isn't. `has-more` is toggled on this column by syncMore. */}
+      <CornerFold />
     </div>
   )
 }
