@@ -7,13 +7,13 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 
 ## ⏸ Blocked on the user
 
-- [ ] **Pick from the six hand-drawn iteration mockups.** Rendered and awaiting approval — do not build any of
-      them until a selection is made (Constitution IV.1). The six: scratchy checkbox · torn-paper section edge ·
-      washi tape on stickers · page-corner fold · handwritten day headers · pencil underline on hover.
+- [ ] **Approve the three mockups in flight:** professional-vs-personalized UI comparison · onboarding flow
+      (3 presentation approaches + both Memphis styles) · adaptive help guide. Nothing gets built until these
+      are picked.
 - [ ] **Design call: elapsed tint on all-day bars.** Late in the day an all-day bar reads ~99% coral, which
       conflates "the day is nearly over" with "this is overdue" — two very different messages in the same colour.
       Proposed options: cap the tint at ~70%, or split the language (hatch for untimed, tint for timed).
-- [ ] **Further instructions** the user flagged as incoming after the doc/subagent restructure.
+      *Still unanswered — carried forward.*
 
 ---
 
@@ -22,17 +22,29 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 Direction change: the hand-made aesthetic risks reading as gimmicky, so it becomes **opt-in** and a
 **professional mode becomes the default**. See `CLAUDE.md` §1 for the architectural contract.
 
+**Settled by the user 2026-08-08 — do not re-open:**
+- Professional motion = **functional + one quiet reward**. Completion feedback is an **Apple-Pay-style green
+  checkmark** (circle + check drawing itself in, quick, understated). Professional cannot drop completion
+  feedback entirely — "reward finishing louder than you punish falling behind" is the thesis counterweight.
+- Onboarding length: **medium, ~6–8 cards.** Plays **once on first launch only**, replayable from Settings.
+- Corporate Memphis: **mock both** literal and refined; user picks from the rendering.
+- **Both modes get equal polish** — the portfolio recording's narrative order is undecided, so neither is secondary.
+- **The logo is the one element identical in both modes.** It never changes.
+
 - [ ] **Professional mode** — Settings toggle. Uniform font, normal cursor, no ink outlines/paper grain/
-      gridlines, sticker characters replaced by a **stack of paper notes**, motion at the functional minimum.
+      gridlines/hand-drawn rules, sticker characters replaced by the approved **paper note stack** (at rest →
+      hover fans out → cleared sweeps away), no sticker or celebration animation.
       One component tree + tokens, never two implementations. Default on first open.
-- [ ] **First-run intro/setup sequence** — welcome card with animating logo → purpose card with
-      Corporate-Memphis-inspired graphics (the deliberate hybrid register) → feature cards covering each
-      mechanic **and its ADHD reasoning** → mode selection + first-run settings → get started. Skip button
-      throughout. Presentation approach not yet chosen (self-contained cards vs. live in-app walkthrough with
-      in-place labels vs. hybrid) — **mockups required before building.**
-- [ ] **`Guide.jsx` professional face** — the existing in-app guide needs a professional variant.
+- [ ] **First-run intro/setup sequence** — welcome + logo animation → purpose card with Memphis graphics →
+      feature cards covering each mechanic **and its ADHD reasoning**, the 3 views, and task creation →
+      mode selection → get started. Next + Skip Introduction on every card. Presentation approach
+      (modal cards vs. satellite/spotlight on real UI vs. hybrid) **being mocked — pick before building.**
+- [ ] **`Guide.jsx` professional face** — the existing 6-chapter guide needs a professional variant.
 - [ ] **`Guide.jsx` defect (personalized):** the logo cube is supposed to roll down the dashed path as you
       scroll and currently doesn't. Known bug, not a redesign.
+- [ ] **The six approved hand-drawn details** (personalized mode only) — scratchy checkbox · torn-paper
+      Completed edge · washi tape on stickers · page-corner fold · handwritten day header swash · pencil
+      underline on hover. **Approved, build them.**
 
 ## ▶ Next up (unblocked, ready to start)
 

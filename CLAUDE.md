@@ -180,6 +180,7 @@ These are all real bugs that were hit and fixed here. Re-breaking them is the ma
 - **Keep in the main thread:** the actual edits, the design decisions, and anything requiring the user's taste.
 - **After each verified pass:** update `docs/TODO.md`, append to the changelog in `docs/MASTER_GUIDE.md`
   (targeted edit — never rewrite the file), and git commit.
+- **No pull requests.** Solo developer — commit and push straight to `main`. Don't branch, don't open PRs.
 - **Before a compaction:** flush anything durable into this file or `docs/TODO.md` first, so the summary can be thin.
 - **Report honestly.** Verified vs. not-verified, stated plainly. If the preview can't prove motion, say so.
 
