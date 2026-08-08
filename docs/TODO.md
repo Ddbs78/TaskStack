@@ -7,12 +7,33 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 
 ## ⏸ Blocked on the user
 
-- [ ] **Onboarding presentation approach.** User wants approach B (satellite/spotlight) explained against C
-      (hybrid) in more depth, specifically the 2nd/3rd spotlight steps, before picking.
-- [ ] **Card 2 (purpose) artwork revision** — hybrid of Memphis (a)+(b) leaning toward (b), plus anatomical
-      fixes (ponytail read as a crescent moon, feet floating off the body). Mockup revision in flight.
-- [ ] **Final card (get started) treatment** — either show the completion checkmark uncut, or lean into the
-      accidental orange top-left corner reveal (user liked it). Mockup revision in flight.
+- [ ] *(nothing — full green light given 2026-08-08. Everything below is approved and in build.)*
+
+## 🟢 Approved and in build (2026-08-08 green light)
+
+**Mode:** Professional **B "Console"** approved (30px bar / 38px lane, hairline + 2px status rail, sticky day
+headers with counts, alternating column wash instead of gridlines, tabular numerals). **The 6px bar radius
+deviation from Constitution §9 is explicitly approved** as part of choosing B.
+**Plus:** `taskStyle` surfaced in Settings as **Solid / Translucent** (the flag already existed as
+`filled | tinted`; it just wasn't exposed).
+
+**All six hand-drawn details approved** (personalized only): scratchy checkbox · torn-paper Completed edge ·
+washi tape on stickers · page-corner fold · handwritten day-header swash · pencil underline on hover.
+
+**Onboarding: approach C (hybrid).** Cards 1/2/7 narrative, 3–6 spotlight-on-real-UI. 7 cards, **segmented
+rail** progress, plays once then only via Settings → Replay the intro. Card 2 art = Memphis hybrid leaning
+(b), with the ponytail-as-crescent and detached-feet anatomy fixed. Final card: checkmark either uncut or
+deliberately overlapped by the orange corner (user liked the accidental version).
+**Spotlight mitigations are mandatory**, not optional: scroll-into-view-and-settle · programmatic menu open
+with orphan recovery · **seeded demo tasks so cards 3–5 aren't empty on a genuine first run** · a >60%-of-
+viewport rule at 375px that falls back to a card.
+
+**Guide:** adaptive per mode, both flowing smoothly, cube fixed to roll along the real path on scroll.
+
+**Logo (hard requirement, repeated by the user in caps):** the mark is **pixel-identical everywhere** — every
+mode, the intro sequence, both guides, the header. Only the *wordmark's* text fill changes with light/dark.
+Always render via `BrandMark`; never redraw or approximate it. Clicking the header logo returns to the
+default 3-day view (done, `ed3f194`).
 - [ ] **Design call: elapsed tint on all-day bars.** Late in the day an all-day bar reads ~99% coral, which
       conflates "the day is nearly over" with "this is overdue" — two very different messages in the same colour.
       Proposed options: cap the tint at ~70%, or split the language (hatch for untimed, tint for timed).

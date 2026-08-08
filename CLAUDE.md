@@ -159,7 +159,14 @@ These are all real bugs that were hit and fixed here. Re-breaking them is the ma
   there. Verify structure and data via DOM evals and production builds; **motion itself can only be verified by
   the user.** Say so rather than claiming verified.
 - **Illustrator SVG exports** carry embedded PNG previews, `i:aipgf` private data, `display:none` layers and
-  invisible font-dependent `<text>`. Strip them — 690KB became 2–5KB.
+  invisible font-dependent `<text>`. Strip them — 1.3MB became 5–8KB. **Fills live in CSS classes
+  (`.stN { fill: url(#gradN) }`), not inline `url()` attributes** — a defs-cleaner that only scans element
+  attributes will silently drop gradients, and unresolved fills render as *nothing*. Scan the `<style>` block too.
+- **`Guide.jsx`'s chapter `offsetTop` only resolves because its scroll container carries `relative`.** Removing
+  that class silently breaks both the cube checkpoints and active-chapter detection, with no error.
+- **A page whose content is entirely JS-rendered looks blank outside the project folder.** The preview harness
+  only executes JS for files served from inside the project — `public/_proto/` works, the scratchpad does not.
+  Mockups with no static fallback must live in the project to be viewable.
 
 ---
 
