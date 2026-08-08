@@ -7,7 +7,34 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 
 ## ⏸ Blocked on the user
 
-- [ ] *(nothing — full green light given 2026-08-08. Everything below is approved and in build.)*
+- [ ] **Verify the animation *feel* in a real browser.** The preview freezes `document.timeline`, so every
+      motion piece below is verified structurally/geometrically but NOT for feel: the Apple-Pay completion
+      check, sticker entrances, the now-line glide, the scratch-check tick draw-on, onboarding card
+      transitions, and the guide's cube settle. These need the user's eyes.
+
+## 🐞 Found during verification (2026-08-08) — not yet addressed
+
+- [ ] **Time popover doesn't dismiss on outside-click or Escape.** Open the "set time" popover in the input
+      bar, then click elsewhere / press Escape — it stays open. Pre-existing (`TimePopover.jsx` /
+      `InputBar.jsx`), not from this session's work. Low severity but worth a click-outside handler.
+
+## ✅ Build complete + verified (2026-08-08)
+
+The full green-lit scope is built, and each piece was exercised live in the browser (structure/geometry;
+motion feel excepted per the blocker above):
+- **Mode foundation** — professional default, personalized opt-in, one token-driven tree. Flip verified both ways.
+- **Professional "Console" B** — verified rendering in 3-day, both themes, 375px (no h-overflow).
+- **Six hand-drawn details** — scratch checkbox, torn edge, washi, corner fold, day swash, pencil underline;
+  underline now spans true text width (verified ul width == text width, 44–160px). Personalized-only confirmed.
+- **Solid/Translucent** task-block setting surfaced.
+- **Onboarding (approach C)** — all 7 cards walked; Memphis art fixed; spotlight mitigations all fire
+  (seeded demo tasks make cards 3–5 real, scroll-into-view on card 4, menu auto-open on card 6); plays once;
+  **demo tasks confirmed cleaned up (demoLeaked: [])**; mode selection persists; orange-corner selection.
+- **Adaptive guide** — professional + personalized; cube rolls down the real path on scroll (verified moving);
+  'right now' chapter demo fixed.
+- **Logo** — enlarged to 54px; real BrandMark used on onboarding card 1 and guide; click-home works.
+- **Header transition** — gridlines fade in under the header instead of hard-cutting.
+- **Week** — "all-day" gutter label added.
 
 ## 🟢 Approved and in build (2026-08-08 green light)
 
@@ -41,7 +68,7 @@ default 3-day view (done, `ed3f194`).
 
 ---
 
-## 🎯 The current arc — dual mode + first-run onboarding (set 2026-08-08)
+## 🎯 The current arc — dual mode + first-run onboarding — ✅ BUILT (see "Build complete" above)
 
 Direction change: the hand-made aesthetic risks reading as gimmicky, so it becomes **opt-in** and a
 **professional mode becomes the default**. See `CLAUDE.md` §1 for the architectural contract.
