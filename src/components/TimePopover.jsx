@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 
 // minutes-from-midnight <-> {h:1-12, m, ap:'AM'|'PM'}
@@ -57,10 +57,33 @@ function Chip({ label, value, onChange }) {
 }
 
 // iOS-style: an "Anytime" switch, then From / To chips with AM·PM.
-export default function TimePopover({ start, end, onChange }) {
+export default function TimePopover({ start, end, onChange, onClose }) {
   const [anytime, setAnytime] = useState(start == null)
   const [from, setFrom] = useState(() => toParts(start ?? 540))
   const [to, setTo] = useState(() => toParts(end ?? (start != null ? start + 60 : 600)))
+  const ref = useRef(null)
+
+  // Dismiss on outside-click or Escape — the popover previously ignored onClose
+  // entirely, so it could only be closed by toggling the clock again.
+  useEffect(() => {
+    if (!onClose) return undefined
+    const onDown = (e) => {
+      // ignore the clock trigger, or clicking it to close would immediately reopen
+      if (e.target.closest?.('[data-time-trigger]')) return
+      if (ref.current && !ref.current.contains(e.target)) onClose()
+    }
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    // defer so the click that opened it doesn't immediately close it
+    const id = setTimeout(() => {
+      document.addEventListener('pointerdown', onDown, true)
+      document.addEventListener('keydown', onKey)
+    }, 0)
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
 
   const emit = (a, f, t) => {
     if (a) onChange({ start: null, end: null })
@@ -69,6 +92,7 @@ export default function TimePopover({ start, end, onChange }) {
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 10, scale: 0.94 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.96 }}

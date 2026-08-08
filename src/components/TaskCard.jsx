@@ -5,7 +5,7 @@ import MarkerRule from './MarkerRule'
 import { createPortal } from 'react-dom'
 import { fmtRange, fmtTime, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
-import { flashComplete, PencilUnderline, ScratchCheck } from './stickers/art'
+import { flashComplete, PencilUnderline } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -209,23 +209,20 @@ const TaskCard = forwardRef(function TaskCard(
           />
         )}
 
-        {/* checkbox — #1 scratchy hand-drawn box in personalized, clean circle otherwise */}
+        {/* checkbox — a clean circle in both modes (the completion burst carries
+            the mode flavour: Apple-Pay check in pro, scratchy tick in personalized) */}
         <button
           aria-label={`Complete ${task.title}`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
-          className={`bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center transition-transform active:scale-90 ${personalized ? '' : 'rounded-full border-2'}`}
+          className="bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-transform active:scale-90"
         >
-          {personalized ? (
-            <ScratchCheck done={task.done} size={22} />
-          ) : (
-            <motion.span
-              initial={false}
-              animate={{ scale: task.done ? 1 : 0 }}
-              className="block h-[11px] w-[11px] rounded-full"
-              style={{ background: 'currentColor' }}
-            />
-          )}
+          <motion.span
+            initial={false}
+            animate={{ scale: task.done ? 1 : 0 }}
+            className="block h-[11px] w-[11px] rounded-full"
+            style={{ background: 'currentColor' }}
+          />
         </button>
 
         {tinted && (

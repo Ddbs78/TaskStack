@@ -125,7 +125,7 @@ export default function App() {
           }}
           aria-label="StackTask — go to today"
         >
-          <BrandMark variant="wordmark" height={54} tumbling={logoTumble || logoLoose} />
+          <BrandMark variant="wordmark" height={60} tumbling={logoTumble || logoLoose} />
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -198,6 +198,7 @@ export default function App() {
         event={celebration}
         calm={!!store.settings.reduceMotion}
         undoVisible={!!toast}
+        personalized={personalized}
         onDone={() => setCelebration(null)}
       />
 

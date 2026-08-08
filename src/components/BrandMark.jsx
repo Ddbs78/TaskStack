@@ -37,6 +37,25 @@ export default function BrandMark({
 
   const svg = variant === 'mark' ? mark : dark ? wordmarkDark : wordmarkLight
 
+  // The exported viewBox has huge empty margins (content is ~68%×60% of it,
+  // offset from the origin), so a given `height` renders the artwork ~40%
+  // smaller than the box implies. Tighten the viewBox to the real content
+  // bounds (measured at rest) plus padding for the tumble, so `height` maps to
+  // the visible mark. Runs on mount and on theme/variant swap.
+  useEffect(() => {
+    const el = hostRef.current?.querySelector('svg')
+    if (!el) return
+    try {
+      const b = el.getBBox()
+      if (!b.width || !b.height) return
+      // Minimal padding: the svg overflows visible (see index.css) so a tumbling
+      // cube never clips even against a tight box — this lets `height` map to the
+      // real artwork instead of the exported margins.
+      const p = 6
+      el.setAttribute('viewBox', `${b.x - p} ${b.y - p} ${b.width + p * 2} ${b.height + p * 2}`)
+    } catch {}
+  }, [svg])
+
   // Each cube's three faces are pre-grouped under class="cube" (see
   // src/assets/brand/README.md — the raw Illustrator export left all 9 face
   // polygons flat, so the cleanup step clusters them by position and wraps

@@ -220,7 +220,7 @@ button { cursor: pointer; }
 }
 
 /* the real brand artwork scales to the box it's given */
-.brandmark svg { height: 100%; width: auto; display: block; }
+.brandmark svg { height: 100%; width: auto; display: block; overflow: visible; }
 
 /* ---------------------------------------------------------------------------
    Hand-drawn craft layer — carries the logo's language into the UI:
@@ -440,6 +440,10 @@ body[data-mode='professional'] { background-image: none; }
 /* tabular numerals everywhere numbers matter — a Console-mode signature */
 [data-mode='professional'] .tabular,
 [data-mode='professional'] time { font-variant-numeric: tabular-nums; }
+
+/* the input bar squares off in professional (Console reads rectangular, not a
+   pill); personalized keeps the soft 28px pill from the base class */
+[data-mode='professional'] .js-chatbar { border-radius: 14px; }
 [data-mode='professional'] .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 /* professional keeps functional motion only: no spring overshoot anywhere.
@@ -531,23 +535,6 @@ body[data-mode='professional'] { background-image: none; }
 }
 [data-mode='personalized'] .task-surface:hover .pencil-ul { opacity: 0.82; }
 @media (prefers-reduced-motion: reduce) { .pencil-ul { transition: none; } }
-
-/* #1 scratchy checkbox — personalized only; the plain circle border is dropped
-   so the hand-drawn SVG box carries the affordance instead. */
-[data-mode='personalized'] .bar-check { border: none !important; background: none; }
-.scratch-check { overflow: visible; }
-.scratch-check .sc-box { stroke: var(--coral-strong); transition: stroke 0.2s ease; }
-.scratch-check .sc-tick {
-  stroke: var(--success);
-  stroke-dasharray: 26;
-  stroke-dashoffset: 26;   /* hidden until done, then strokes on */
-}
-.scratch-check.is-done .sc-box { stroke: var(--success); }
-.scratch-check.is-done .sc-tick {
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 0.3s ease 0.05s;
-}
-@media (prefers-reduced-motion: reduce) { .scratch-check .sc-tick { transition: none; } }
 
 /* #2 torn paper edge on the Completed drawer */
 .tear-edge { display: block; width: 100%; height: 9px; color: var(--hairline); }

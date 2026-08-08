@@ -5,7 +5,7 @@ import Icon from './Icon'
 import { fracOf, fmtRange } from '../state/time'
 import { elapsedFraction, elapsedToday, overdueDays } from '../state/rollover'
 import { spanOf, BAR_MIN_PX } from '../state/bands'
-import { flashComplete, PencilUnderline, ScratchCheck } from './stickers/art'
+import { flashComplete, PencilUnderline } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -289,12 +289,10 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
             aria-label={`Complete ${task.title}`}
             onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
             onPointerDown={(e) => e.stopPropagation()}
-            className={`bar-check relative z-[2] grid shrink-0 place-items-center ${personalized ? '' : 'rounded-full border-[1.5px]'}`}
+            className="bar-check relative z-[2] grid shrink-0 place-items-center rounded-full border-[1.5px]"
             style={{ width: 'var(--cb)', height: 'var(--cb)' }}
           >
-            {personalized
-              ? <ScratchCheck done={task.done} size={18} />
-              : task.done && <span className="rounded-full" style={{ width: 8, height: 8, background: 'currentColor' }} />}
+            {task.done && <span className="rounded-full" style={{ width: 8, height: 8, background: 'currentColor' }} />}
           </button>
         )}
 

@@ -246,7 +246,7 @@ export default function InputBar({ onAdd, view, setView, onOpenSettings, onOpenA
                     )}
                   </AnimatePresence>
                 </div>
-                <div className="relative">
+                <div className="relative" data-time-trigger>
                   <IconBtn onClick={() => setShowTime((v) => !v)} active={showTime || effectiveTime.start != null} title="Set time"><Icon name="clock" size={19} /></IconBtn>
                   <AnimatePresence>
                     {showTime && (

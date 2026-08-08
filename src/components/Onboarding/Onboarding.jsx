@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import BrandMark from '../BrandMark'
 import Icon from '../Icon'
 import Spotlight, { TravelCue } from './Spotlight'
@@ -246,19 +247,34 @@ export default function Onboarding({ open, store, onFinish }) {
       const w = 380
       const h = el.offsetHeight
       const G = 20
-      Object.assign(el.style, { right: 'auto', bottom: 'auto', width: `${w}px` })
+      // glide between steps rather than jump
+      Object.assign(el.style, {
+        right: 'auto', bottom: 'auto', width: `${w}px`,
+        transition: 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1)',
+      })
       const clampX = (x) => Math.max(16, Math.min(vw - w - 16, x))
       const clampY = (y) => Math.max(16, Math.min(vh - h - 16, y))
-      const centreX = clampX(r.left + r.width / 2 - w / 2)
-      const centreY = clampY(r.top + r.height / 2 - h / 2)
-      let left = centreX
-      let top = centreY
-      // side first, then above/below. Never the centre-on-target case, which is
-      // how the callout ended up sitting on the input bar it was pointing at.
-      if (vw - (r.left + r.width) > w + G) { left = r.left + r.width + G; top = centreY }
-      else if (r.left > w + G) { left = r.left - w - G; top = centreY }
-      else if (r.top > h + G) { top = r.top - h - G }
-      else if (vh - (r.top + r.height) > h + G) { top = r.top + r.height + G }
+      const spaceRight = vw - (r.left + r.width)
+      const spaceLeft = r.left
+      const spaceBelow = vh - (r.top + r.height)
+      const spaceAbove = r.top
+      let left, top
+      // Side first, then above/below — and CRUCIALLY never centre-on-target, so
+      // the callout can't sit on top of the very thing it's pointing at (the
+      // now-line was getting covered). Each branch clears the target rect.
+      if (spaceRight >= w + G) { left = r.left + r.width + G; top = clampY(r.top + r.height / 2 - h / 2) }
+      else if (spaceLeft >= w + G) { left = r.left - w - G; top = clampY(r.top + r.height / 2 - h / 2) }
+      else if (spaceBelow >= h + G) { top = r.top + r.height + G; left = clampX(r.left + r.width / 2 - w / 2) }
+      else if (spaceAbove >= h + G) { top = r.top - h - G; left = clampX(r.left + r.width / 2 - w / 2) }
+      else {
+        // nothing fully clears — dock to the viewport edge on the roomiest side,
+        // which still reveals most of the target rather than covering its centre
+        const m = Math.max(spaceRight, spaceLeft, spaceBelow, spaceAbove)
+        if (m === spaceRight) { left = vw - w - 16; top = clampY(r.top) }
+        else if (m === spaceLeft) { left = 16; top = clampY(r.top) }
+        else if (m === spaceBelow) { top = vh - h - 16; left = clampX(r.left) }
+        else { top = 16; left = clampX(r.left) }
+      }
       el.style.left = `${Math.round(clampX(left))}px`
       el.style.top = `${Math.round(clampY(top))}px`
     }
@@ -289,7 +305,13 @@ export default function Onboarding({ open, store, onFinish }) {
   const showArt = s.kind === 'card' || phase === 'fallback'
 
   const panel = (
-    <>
+    // keyed by step so each card's content fades/rises in instead of hard-cutting
+    <motion.div
+      key={step}
+      initial={calm ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: calm ? 0.16 : 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+    >
       <Rail index={step} total={STEPS.length} />
       <h2 style={T.h2}>{s.title}</h2>
       <p style={T.body}>{s.body}</p>
@@ -307,7 +329,7 @@ export default function Onboarding({ open, store, onFinish }) {
       )}
 
       <Foot index={step} total={STEPS.length} last={last} onSkip={finish} onNext={next} />
-    </>
+    </motion.div>
   )
 
   return (
@@ -407,8 +429,8 @@ function WelcomeArt({ calm }) {
     return () => clearTimeout(t)
   }, [calm])
   return (
-    <div style={{ display: 'grid', placeItems: 'center', padding: '22px 0 6px' }}>
-      <BrandMark variant="wordmark" height={54} tumbling={!settled} />
+    <div style={{ display: 'grid', placeItems: 'center', padding: '26px 0 10px' }}>
+      <BrandMark variant="wordmark" height={92} tumbling={!settled} />
     </div>
   )
 }

@@ -156,7 +156,40 @@ function ZeroCinematic({ onSkip, still }) {
 
 // ---- everyday completion: corner toast ---------------------------------------
 // `stacked` lifts this clear of the undo toast, which occupies the same dock.
-function OneToast({ done, left, onSkip, still, stacked }) {
+// professional: a restrained green check + plain progress line. No bean, no
+// bounce — the same Apple-Pay check language as the checkbox burst.
+function ProCheckToast({ done, left, still, stacked }) {
+  return (
+    <motion.div
+      className="pointer-events-none fixed left-1/2 z-[60] -translate-x-1/2"
+      style={{ bottom: stacked ? 186 : 112 }}
+      initial={still ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: still ? 0.16 : 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+    >
+      <div
+        className="flex items-center gap-2.5 rounded-xl px-4 py-2.5"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--hairline)',
+          boxShadow: 'var(--shadow-card)',
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" fill="var(--success)" />
+          <path d="M6.8 12.4 L10.4 16 L17.2 8.4" fill="none" stroke="#06281c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+          {left > 0 ? `Done · ${done} of ${done + left}` : `Done · all ${done} today`}
+        </span>
+      </div>
+    </motion.div>
+  )
+}
+
+function OneToast({ done, left, onSkip, still, stacked, personalized }) {
+  if (!personalized) return <ProCheckToast done={done} left={left} still={still} stacked={stacked} />
   return (
     <motion.div
       className="pointer-events-none fixed left-1/2 z-[60] -translate-x-1/2"
@@ -192,7 +225,7 @@ function OneToast({ done, left, onSkip, still, stacked }) {
   )
 }
 
-export default function Celebration({ event, onDone, calm = false, undoVisible = false }) {
+export default function Celebration({ event, onDone, calm = false, undoVisible = false, personalized = false }) {
   const prefersReduced = useReducedMotion()
   const still = calm || prefersReduced
   const zero = event?.type === 'zero'
@@ -216,7 +249,7 @@ export default function Celebration({ event, onDone, calm = false, undoVisible =
         zero ? (
           <ZeroCinematic key={event.id} onSkip={skip} still={still} />
         ) : (
-          <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} stacked={undoVisible} />
+          <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} stacked={undoVisible} personalized={personalized} />
         )
       )}
     </AnimatePresence>
