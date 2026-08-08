@@ -1,0 +1,66 @@
+# TODO — live work
+
+Read at the start of every session, right after `CLAUDE.md`. Keep it current; it is the handoff.
+Last updated: **2026-08-07**, at commit `097fe9b`.
+
+---
+
+## ⏸ Blocked on the user
+
+- [ ] **Pick from the six hand-drawn iteration mockups.** Rendered and awaiting approval — do not build any of
+      them until a selection is made (Constitution IV.1). The six: scratchy checkbox · torn-paper section edge ·
+      washi tape on stickers · page-corner fold · handwritten day headers · pencil underline on hover.
+- [ ] **Design call: elapsed tint on all-day bars.** Late in the day an all-day bar reads ~99% coral, which
+      conflates "the day is nearly over" with "this is overdue" — two very different messages in the same colour.
+      Proposed options: cap the tint at ~70%, or split the language (hatch for untimed, tint for timed).
+- [ ] **Further instructions** the user flagged as incoming after the doc/subagent restructure.
+
+---
+
+## ▶ Next up (unblocked, ready to start)
+
+- [ ] **`OverduePile.jsx` is a grep-verified orphan** (94 lines, imported nowhere; the capped pile is rendered
+      inline in `Timeline.jsx` and `Week.jsx`). Park it to `_parked/` per Constitution IV.6, or delete with
+      permission. Do not leave it as a silent orphan.
+- [ ] **Verify the old product name is fully gone.** `store.js` still persists to `flow.tasks.v1` /
+      `flow.settings.v1` (fine — migrating the keys would drop existing user data). But confirm no
+      *user-visible* "Flow" string remains: check `SettingsModal.jsx`, `ai/assistant.js`, and the `role: 'flow'`
+      literal in `AssistantPanel.jsx`.
+- [ ] **iPhone / 375px pass.** Constitution I names Mac + iPhone; the narrow breakpoint has not had a
+      dedicated sweep since Week and Month were rebuilt.
+- [ ] **Task-height resize** (vertical span). Deferred repeatedly — map the grid math *before* touching it,
+      since bar height is currently fixed at `BAR_H = 44` / `LANE = 56` and lane packing assumes it.
+
+---
+
+## 🎬 Waiting on external work
+
+- [ ] **`breakthrough.mp4` swap-in** for the inbox-zero cinematic. The user is producing the video externally.
+      `Celebration.jsx` → `ZeroCinematic` is already structured for the swap; the full spec is in
+      `src/assets/cinematic/ANIMATION_BRIEF.md`. The 27 concept PNGs in that folder are reference for the
+      external tool, **not** imported by any source file.
+- [ ] **The portfolio screen recording itself** — the reason the whole polish arc exists.
+
+---
+
+## ✅ Recently landed (newest first — full history in `MASTER_GUIDE.md`)
+
+| commit | what |
+|---|---|
+| `097fe9b` | Pencil cursor stopped overriding every designated glyph, + 5 audit findings |
+| `4763457` | Drag-to-reorder, personalization pack, interactive guide |
+| `282553d` | Pencil cursor + drill-down navigation between views |
+| `5877e13` | Midnight rollover: now-line no longer freezes on the previous day |
+| `9005b4a` | All-day and timed tasks unified into one lane system (option A) |
+| `56023c6` | Date picker, toast collision, inbox-zero trigger, chat-bar jump |
+
+**The five findings from the last deep audit are all fixed:** `packLanes` was re-sorting away manual drag order ·
+`focusDay` was never cleared · the pencil trail's `screen` blend was invisible on the light theme ·
+the guide's resume-scroll was a `saved * 0.0001` no-op · a dead `OverduePile` import.
+
+---
+
+## 🧊 Parked (do not build without a fresh decision)
+
+See `PARKED_FEATURES.md`. Notably: click-anywhere-to-add · chat-bar edge-resize (was built, then reverted) ·
+`_parked/PreviewChips.jsx`.
