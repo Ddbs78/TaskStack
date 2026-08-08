@@ -7,9 +7,12 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 
 ## ⏸ Blocked on the user
 
-- [ ] **Approve the three mockups in flight:** professional-vs-personalized UI comparison · onboarding flow
-      (3 presentation approaches + both Memphis styles) · adaptive help guide. Nothing gets built until these
-      are picked.
+- [ ] **Onboarding presentation approach.** User wants approach B (satellite/spotlight) explained against C
+      (hybrid) in more depth, specifically the 2nd/3rd spotlight steps, before picking.
+- [ ] **Card 2 (purpose) artwork revision** — hybrid of Memphis (a)+(b) leaning toward (b), plus anatomical
+      fixes (ponytail read as a crescent moon, feet floating off the body). Mockup revision in flight.
+- [ ] **Final card (get started) treatment** — either show the completion checkmark uncut, or lean into the
+      accidental orange top-left corner reveal (user liked it). Mockup revision in flight.
 - [ ] **Design call: elapsed tint on all-day bars.** Late in the day an all-day bar reads ~99% coral, which
       conflates "the day is nearly over" with "this is overdue" — two very different messages in the same colour.
       Proposed options: cap the tint at ~70%, or split the language (hatch for untimed, tint for timed).
@@ -22,7 +25,16 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 Direction change: the hand-made aesthetic risks reading as gimmicky, so it becomes **opt-in** and a
 **professional mode becomes the default**. See `CLAUDE.md` §1 for the architectural contract.
 
-**Settled by the user 2026-08-08 — do not re-open:**
+**Settled by the user 2026-08-08 (second pass) — do not re-open:**
+- **Professional mode B ("Console") approved** over A ("Ledger"). Includes the 6px-radius deviation from
+  Constitution §9 — user approved B as shown, which carries that deviation.
+- **All six hand-drawn personalized details approved** — build them.
+- **Onboarding progress indicator: segmented rail** (not dots).
+- **Guide.jsx cube-on-path bug: proceed with the fix** (technique already validated in the mockup).
+- **Logo/brand overhaul: DONE this session.** New 3D-cube artwork (no bulky outline) wired end to end —
+  see the dedicated section below.
+
+**Settled by the user 2026-08-08 (first pass) — do not re-open:**
 - Professional motion = **functional + one quiet reward**. Completion feedback is an **Apple-Pay-style green
   checkmark** (circle + check drawing itself in, quick, understated). Professional cannot drop completion
   feedback entirely — "reward finishing louder than you punish falling behind" is the thesis counterweight.
@@ -45,6 +57,34 @@ Direction change: the hand-made aesthetic risks reading as gimmicky, so it becom
 - [ ] **The six approved hand-drawn details** (personalized mode only) — scratchy checkbox · torn-paper
       Completed edge · washi tape on stickers · page-corner fold · handwritten day header swash · pencil
       underline on hover. **Approved, build them.**
+
+## ✅ Logo/brand overhaul (done 2026-08-08)
+
+User replaced the source art in `src/assets/brand/` with a new 3D-cube style (gradient-shaded, no bulky
+outline) and required it be **pixel-identical everywhere** — header, both modes, both guides, onboarding.
+
+- Raw Illustrator exports were ~1.3MB each with the usual bloat (dozens of hidden `_copy` layers, two
+  embedded raster previews, `aipgf` metadata). Found the single actually-visible top-level group per file
+  (everything else was `display:none`), traced its real gradient/clipPath dependencies through `xlink:href`
+  chains, and rebuilt minimal `.clean.svg` files — 1.3MB → 5-8KB. Verified pixel-identical by isolated
+  render, twice, after an initial cleaning pass silently dropped gradient fills (fills live in CSS classes,
+  not inline `url()` — the first extraction script scanned the wrong place, see `src/assets/brand/README.md`).
+- **The mark is now a single file, no theme split** — it has no outline, so nothing needs recoloring.
+  Only the wordmark's text fill still swaps black/white per theme.
+- The raw export left all 9 face polygons (3 cubes × 3 faces) flat, ungrouped — the old tumble easter egg
+  depended on `#Layer_6`'s "first three `<g>` children" and would have silently degraded to rotating the
+  whole mark as one rigid block. Re-clustered the 9 polygons into 3 `<g class="cube">` groups by spatial
+  centroid (k-means); `BrandMark.jsx` now queries `.cube` directly instead of any Illustrator layer id, so
+  it survives the next re-export. Verified: 3 independent transforms fire on hover, reset on leave.
+- `public/favicon.svg` regenerated from the same cleaned mark.
+- **New:** clicking the header logo now always returns to the 3-day view (`setView('three')`,
+  `setFocusDay(null)`), on top of the existing tap-5-times easter egg.
+- Verified live: header wordmark, hover-tumble, click-to-home from Week view, light + dark theme, Guide's
+  `variant="mark"` usage, zero real console/network errors (confirmed via direct `curl`, since the preview's
+  own console carried stale entries from before a required server restart — Vite's dep cache needed clearing
+  after the file rename).
+- Not yet done: the onboarding and mode-comparison **mockups** were built against the old logo and haven't
+  been regenerated — cosmetic only, not blocking, but don't mistake them for current when reviewing.
 
 ## ▶ Next up (unblocked, ready to start)
 

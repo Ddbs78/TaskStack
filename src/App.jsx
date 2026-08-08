@@ -106,6 +106,9 @@ export default function App() {
           onMouseEnter={() => setLogoTumble(true)}
           onMouseLeave={() => setLogoTumble(false)}
           onClick={() => {
+            // primary function: always return home to the default 3-day view
+            setFocusDay(null)
+            setView('three')
             // easter egg: keep tapping and the cubes break loose
             const n = tapRef.current + 1
             tapRef.current = n
@@ -113,7 +116,7 @@ export default function App() {
             tapTimer.current = setTimeout(() => { tapRef.current = 0 }, 900)
             if (n >= 5) { tapRef.current = 0; setLogoLoose(true); setTimeout(() => setLogoLoose(false), 2600) }
           }}
-          aria-label="StackTask"
+          aria-label="StackTask — go to today"
         >
           <BrandMark variant="wordmark" height={42} tumbling={logoTumble || logoLoose} />
         </button>

@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import wordmarkDark from '../assets/brand/wordmark-white.clean.svg?raw'
 import wordmarkLight from '../assets/brand/wordmark-black.clean.svg?raw'
-import markDark from '../assets/brand/favicon-white.clean.svg?raw'
-import markLight from '../assets/brand/favicon-black.clean.svg?raw'
+import mark from '../assets/brand/mark.clean.svg?raw'
 
 // The real TaskStack artwork, inlined as raw SVG so the three cubes stay
 // individually addressable — the tumble easter egg animates them directly.
 //
-// Two source files per lockup (black-outline for light UI, white-outline for
-// dark) because the outline colour is baked into the exported art; we swap the
-// whole file on theme rather than trying to recolor strokes.
+// The cube mark itself has no outline to recolor, so it is a SINGLE file used
+// identically in both themes — the only thing that changes with theme is the
+// wordmark's text colour (still baked into two exported files, since the
+// colour is fill, not stroke, and swapping the whole file is simplest).
 export default function BrandMark({
   variant = 'wordmark',   // 'wordmark' | 'mark'
   height = 30,
@@ -24,27 +24,27 @@ export default function BrandMark({
     () => (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark'
   )
 
-  // follow the app's theme attribute
+  // the wordmark's text fill still swaps with theme; the mark never does
   useEffect(() => {
+    if (variant !== 'wordmark') return
     const el = document.documentElement
     const read = () => setDark((el.getAttribute('data-theme') || 'dark') === 'dark')
     read()
     const mo = new MutationObserver(read)
     mo.observe(el, { attributes: true, attributeFilter: ['data-theme'] })
     return () => mo.disconnect()
-  }, [])
+  }, [variant])
 
-  const svg =
-    variant === 'mark' ? (dark ? markDark : markLight) : dark ? wordmarkDark : wordmarkLight
+  const svg = variant === 'mark' ? mark : dark ? wordmarkDark : wordmarkLight
 
-  // The exported art groups each cube separately inside Layer_6, so the first
-  // three <g> children of that layer ARE the cubes. Tumble them in place.
+  // Each cube's three faces are pre-grouped under class="cube" (see
+  // src/assets/brand/README.md — the raw Illustrator export left all 9 face
+  // polygons flat, so the cleanup step clusters them by position and wraps
+  // each triplet). Tumble each group independently.
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
-    const layer = host.querySelector('#Layer_6') || host.querySelector('svg > g')
-    if (!layer) return
-    const cubes = [...layer.children].filter((n) => n.tagName === 'g').slice(0, 3)
+    const cubes = [...host.querySelectorAll('.cube')]
     cubes.forEach((g, i) => {
       // rotate about each cube's own centre
       const b = g.getBBox()
