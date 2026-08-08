@@ -147,6 +147,14 @@ These are all real bugs that were hit and fixed here. Re-breaking them is the ma
 
 - **Delegate:** any broad search, any multi-file audit, any "read these N files and tell me X", any verification
   sweep, any inventory. Ask the subagent for a *conclusion under N words*, never for file dumps.
+- **Two dedicated agents live in `.claude/agents/`:**
+  - **`design-smith`** — every visual/interaction change. Defaults to MOCKUP mode (renders 2–4 distinct options
+    to a file for approval); switches to BUILD once the user greenlights one. Carries the aesthetic direction,
+    including the standing "sanitized is a failure mode" rule.
+  - **`bug-hound`** — run after **every** build pass, and on any "it's glitchy" report. Sweeps §5 below as a
+    regression checklist, verifies findings against real code, fixes what it confirms. It does **not** commit —
+    the main thread reviews and commits, so a bad automatic fix never becomes a save point.
+  - Both start cold and are instructed to read this file first. If a rule changes here, they inherit it.
 - **Keep in the main thread:** the actual edits, the design decisions, and anything requiring the user's taste.
 - **After each verified pass:** update `docs/TODO.md`, append to the changelog in `docs/MASTER_GUIDE.md`
   (targeted edit — never rewrite the file), and git commit.
