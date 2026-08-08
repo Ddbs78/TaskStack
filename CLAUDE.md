@@ -19,8 +19,30 @@ StackTask is a minimalist, local-first, **timeline-based** task manager. A red n
 infinite 3-day window in real time; tasks sit where they actually happen; nothing unfinished ever vanishes.
 Built as a **portfolio screen-recording piece** — it has to prove a behavioural thesis, not just look nice.
 
-**Ethos:** speed, friction-free entry, visual delight. Warm and hand-made (Anthropic) yet clean and
-effortless (Apple). The anti-Notion, anti-ClickUp, anti-Calendar.
+**Ethos:** speed, friction-free entry, visual delight. The anti-Notion, anti-ClickUp, anti-Calendar.
+
+### Two modes — architectural, not cosmetic (direction set 2026-08-08)
+
+The app ships **two visual personalities driven by one setting**, because the hand-made aesthetic risks reading
+as gimmicky to users who want a serious tool.
+
+- **Professional — the default. The app opens in this.** Uniform system font, normal cursor, no ink outlines,
+  no paper grain, no gridlines, no sticker characters (the capped overdue overflow becomes a **stack of paper
+  notes**), motion pared to the functional minimum.
+- **Personalized — opt-in from Settings.** The full craft layer: hand-drawn ink, pencil cursor + graphite
+  trail, sticker characters, celebrations, easter eggs.
+
+**Implement as one component tree driven by tokens and a mode flag — never two parallel implementations.**
+The craft layer is already class/token-driven (`.inked`, `.marker-rule`, `.pencil`, `--ink`, `--paper-grain`),
+so professional mode is largely the *absence* of those plus neutralised tokens. If a `mode === 'pro' ? <A/> : <B/>`
+appears for anything bigger than a leaf node, the token approach was abandoned too early and the two modes
+will drift.
+
+**Professional is not a degraded fallback.** It is the default face of the product and must look deliberately
+designed. "The real app with the fun turned off" is a failed design.
+
+**The behavioural thesis survives both modes.** The overdue cap, the escape valve, and progress having its own
+visual channel are the reason the product exists. Professional mode restyles them; it never removes them.
 
 **The behavioural thesis (corrected — this correction is load-bearing):**
 The app originally assumed seeing tasks stack up creates healthy urgency. The evidence says the opposite for

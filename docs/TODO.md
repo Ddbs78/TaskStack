@@ -17,6 +17,23 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
 
 ---
 
+## 🎯 The current arc — dual mode + first-run onboarding (set 2026-08-08)
+
+Direction change: the hand-made aesthetic risks reading as gimmicky, so it becomes **opt-in** and a
+**professional mode becomes the default**. See `CLAUDE.md` §1 for the architectural contract.
+
+- [ ] **Professional mode** — Settings toggle. Uniform font, normal cursor, no ink outlines/paper grain/
+      gridlines, sticker characters replaced by a **stack of paper notes**, motion at the functional minimum.
+      One component tree + tokens, never two implementations. Default on first open.
+- [ ] **First-run intro/setup sequence** — welcome card with animating logo → purpose card with
+      Corporate-Memphis-inspired graphics (the deliberate hybrid register) → feature cards covering each
+      mechanic **and its ADHD reasoning** → mode selection + first-run settings → get started. Skip button
+      throughout. Presentation approach not yet chosen (self-contained cards vs. live in-app walkthrough with
+      in-place labels vs. hybrid) — **mockups required before building.**
+- [ ] **`Guide.jsx` professional face** — the existing in-app guide needs a professional variant.
+- [ ] **`Guide.jsx` defect (personalized):** the logo cube is supposed to roll down the dashed path as you
+      scroll and currently doesn't. Known bug, not a redesign.
+
 ## ▶ Next up (unblocked, ready to start)
 
 - [ ] **`OverduePile.jsx` is a grep-verified orphan** (94 lines, imported nowhere; the capped pile is rendered

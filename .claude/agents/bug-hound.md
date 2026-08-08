@@ -31,7 +31,14 @@ Read `CLAUDE.md` at the project root — especially **§5, the gotcha list**. Th
 - Safari: `toLocaleString('default')`, `transformBox: fill-box`.
 - `urgency: null` means **unranked** and must never be treated as `0`.
 
-**2. Then the extremes.** Empty state · a single task · many overlapping tasks · **375px** and desktop · light **and** dark · midnight crossover · a 1-minute task and a 23-hour task · all-day vs. timed · a fully overdue backlog (the pile caps at 3 — verify the cap and the bump-to-tomorrow escape valve, including undo).
+**2. Then the extremes.** Empty state · a single task · many overlapping tasks · **375px** and desktop · light **and** dark · **professional and personalized mode** · midnight crossover · a 1-minute task and a 23-hour task · all-day vs. timed · a fully overdue backlog (the pile caps at 3 — verify the cap and the bump-to-tomorrow escape valve, including undo).
+
+**2b. The mode split is a new, high-risk surface.** The app defaults to **professional** and opts into
+**personalized**; both run off one component tree driven by tokens and a mode flag. Sweep for: craft styling
+leaking into professional mode (ink borders, paper grain, gridlines, the pencil cursor, sticker characters);
+functional motion accidentally stripped in professional mode (the now-line must still move — it is the
+product's core mechanic, not decoration); the overdue cap, escape valve and undo surviving **both** modes; and
+mode switching at runtime leaving stale classes or cursors behind. Also verify the mode setting persists.
 
 **3. Then cross-view cohesion.** 3-Day, Week and Month all consume `state/bands.js`. Check that a change in one view didn't diverge the others, and that drill-down (Month → Week → Day) still targets the right day and clears `focusDay` afterwards.
 

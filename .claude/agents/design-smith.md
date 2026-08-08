@@ -32,22 +32,92 @@ Implement the approved design. Targeted diffs only — never rewrite a whole fil
 
 ---
 
-## The aesthetic — this is the part that gets it wrong most often
+## THE APP HAS TWO MODES. This is the single most important thing to internalise.
 
-**"Alive, warm, hand-made (Anthropic) yet clean, modern, effortless (Apple)."**
+StackTask ships **two visual personalities driven by one setting**. Every visual decision you make must be
+answered **twice** — once for each mode — or you have only done half the job.
 
-The user has rejected work twice for being **"generic and sanitized."** What they want is a *hidden app nugget* — their own references are Tesla's hedgehog easter egg and Google doodles, described as **"graffiti tagging a building but cuter."** Hand-drawn, personal, a pop of colour.
+### Professional mode — **the default. The app opens in this.**
 
-Read this as a hard directive: **a clean, tidy, on-brand component is a failure mode here, not a safe default.** When in doubt, go weirder and more hand-made, not safer.
+Serious, restrained, credible in an office. For users who do not want a childish environment.
 
-Concrete rules:
-- The sticker characters **deliberately hard-code colours outside the theme tokens** so they stay equally colourful in light and dark. That is intentional. Do not "fix" it by tokenising them.
+- System/uniform font. **No** display or hand-drawn typeface.
+- **No** custom cursor — the normal system pointer, and all designated cursors native.
+- **No** bold ink outlines, no hard offset shadows, no paper grain, no wobbly marker rules.
+- **No** gridlines on the timeline.
+- **No** sticker characters. The capped-overdue overflow is represented by a **stack of paper notes** —
+  a restrained, literal stack-of-documents visual, not a character.
+- Motion pared back to the **functional minimum**: state changes still need to be legible, but nothing
+  decorative, nothing bouncy, no confetti, no cinematic, no springs with visible overshoot.
+- Flat, quiet surfaces. Neutral palette discipline; coral reserved for genuine signal, not flavour.
+
+### Personalized mode — opt-in, from Settings
+
+Everything the project built up to now: warm, hand-made, alive.
+
+- Hand-drawn craft layer, inked borders, offset shadows, paper grain, marker rules, doodles.
+- The yellow pencil cursor with red eraser, press-tilt, and canvas graphite trail.
+- The six die-cut sticker characters, which **deliberately hard-code colours outside the theme tokens** so
+  they stay equally colourful in light and dark. That is intentional — do not "fix" it by tokenising them.
+- Full celebration and easter-egg layer.
+- Here — and **only** here — the standing rule applies: the user rejected two rounds for being
+  **"generic and sanitized."** Their references are Tesla's hidden easter eggs and Google doodles,
+  *"graffiti tagging a building but cuter."* In this mode a clean, tidy, on-brand component is a
+  **failure mode, not a safe default.** When in doubt, go weirder and more hand-made.
+
+### How to implement the split — non-negotiable
+
+**One component tree, driven by tokens and a single mode flag.** Never fork into two parallel component
+implementations: every future change would then have to be made twice, and they will drift within a week.
+
+The craft layer is already token- and class-driven (`.inked`, `.marker-rule`, `.pencil`, `--ink`,
+`--paper-grain`, `--pencil-ink`). Professional mode should mostly be the **absence** of those classes and
+neutralised tokens — not a second set of components. If you find yourself writing `mode === 'pro' ? <A/> : <B/>`
+for anything bigger than a leaf node, stop and reconsider the token approach.
+
+**Both modes are first-class.** Professional is not a degraded fallback — it is the default face of the
+product and must look deliberately designed, not stripped. A professional mode that reads as "the real app
+with the fun turned off" is a failed design.
+
+### Rules that hold in BOTH modes
+
 - Warm charcoal, never pure black. Coral is the soul colour — **never red.**
 - **Colour plus text, always.** Overdue is coral *and* the words "N days ago." Never colour alone.
 - Custom stroke SVG icons. **Never emoji.**
-- Sentence case. Two font weights. 16px radii. Subtle shadows.
-- Copy voice is gently teasing, never scolding: *"3 still lurking"*, *"bump 'em to tomorrow"*, *"nothing lurking — nice"*.
-- Motion is **load-bearing**, not decoration — stickers and celebrations without it read as pasted-on clip art. But gate every bit of it behind `prefers-reduced-motion` **and** `settings.reduceMotion`; when reduced, a sticker still sits at its rest angle, it just doesn't move.
+- Sentence case. 16px radii.
+- **The behavioural thesis is not decoration.** The overdue cap at 3, the escape valve, and progress having
+  its own visual channel survive in professional mode — they are the product's reason to exist. Professional
+  mode restyles them; it does not remove them.
+- Copy voice: gently teasing in personalized (*"3 still lurking"*, *"bump 'em to tomorrow"*), plain and calm
+  in professional (*"3 more overdue"*, *"move to tomorrow"*). Never scolding in either.
+- All motion stays gated behind `prefers-reduced-motion` **and** `settings.reduceMotion`, on top of the mode.
+
+---
+
+## The intro / setup sequence
+
+A first-run onboarding flow that opens before the app. Direction is still being settled with the user — do not
+build it until a specific approach is greenlit. The shape so far:
+
+1. A **welcome card**: logo animating in, "welcome to StackTask." Then a `next` button and a persistent
+   **skip introduction** affordance on every card.
+2. A **purpose card** explaining what the app is for, using words plus **informative Corporate-Memphis-inspired
+   graphics** — deliberately chosen as the *hybrid* register that bridges the playful and professional modes.
+3. **Feature cards** covering the critical mechanics and, importantly, **the ADHD reasoning behind each one** —
+   not just what it does but why it exists. The views (daily/weekly/monthly); that creating a task is as simple
+   as typing it and hitting enter; what each button does; task-bar controls; all-day vs. specific-time tasks.
+   Open question: whether these are self-contained animated cards, or a **live walkthrough** that moves to the
+   real section of the app and labels it in place. Satellite/callout cards are a candidate for the
+   button-and-control explanations.
+4. **Setup cards**: pick **professional or personalized mode**, plus other first-run settings.
+5. A final **get started** prompt.
+
+The count and presentation of the info cards is yours to propose. Refine the blueprint and get it approved
+before integrating.
+
+**Also in scope:** the existing in-app guide (`Guide.jsx`) must get a professional-mode face. And in
+personalized mode its animation is currently under-delivering — the logo cube is meant to roll down the
+dashed path as you scroll and does not. Treat that as a known defect to fix, not a feature to redesign.
 
 ---
 
