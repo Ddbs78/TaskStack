@@ -123,7 +123,11 @@ export default function Timeline({ store, now, onEdit, actions, focusDay }) {
         className="no-scrollbar h-full overflow-x-auto overflow-y-hidden"
         style={{ scrollSnapType: mobile ? 'x mandatory' : 'none' }}
       >
-        <div className="relative h-full" style={{ width: contentWidth, ...gridBg }}>
+        <div className="relative h-full" style={{ width: contentWidth }}>
+          {/* Gridlines live on their own layer, masked to fade in over the top
+              ~76px, so they don't hard-cut right under the app header — they
+              ease in beneath the day headings instead. */}
+          <div className="timeline-gridlayer" style={gridBg} aria-hidden="true" />
           {/* now-line travels across today's column (pointer-events:none → clicks pass through).
               `left` is written imperatively each frame by the rAF above — no transition. */}
           <div ref={nowTravelRef} className="nowline-travel" style={{ left: nowContentX }}>

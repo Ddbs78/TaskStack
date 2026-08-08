@@ -125,6 +125,17 @@ body {
   );
 }
 
+/* the 3-day timeline's gridlines, on their own layer so a top fade eases them
+   in under the header instead of starting with a hard horizontal edge */
+.timeline-gridlayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 76px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 76px);
+}
+
 .font-display { font-family: var(--font-display); }
 
 /* hide scrollbars but keep scroll */
@@ -502,20 +513,41 @@ body[data-mode='professional'] { background-image: none; }
    or gated by [data-mode='personalized'] here.
 --------------------------------------------------------------------------- */
 
-/* #6 pencil underline: hovering a task sketches a line under its title */
+/* #6 pencil underline: hovering a task sketches a line under its title.
+   It lives inside the title wrapper (.tl-text / .bar-title) and spans 100% of
+   it, so the line matches the ACTUAL text length instead of a fixed inset that
+   under-runs long titles. */
 .pencil-ul {
   position: absolute;
-  left: 34px;
-  right: 44px;
-  bottom: 5px;
+  left: 0;
+  right: auto;
+  width: 100%;
+  bottom: -1px;
   height: 5px;
   opacity: 0;
   z-index: 2;
   pointer-events: none;
   transition: opacity 0.13s ease;
 }
-[data-mode='personalized'] .task-surface:hover > .pencil-ul { opacity: 0.8; }
+[data-mode='personalized'] .task-surface:hover .pencil-ul { opacity: 0.82; }
 @media (prefers-reduced-motion: reduce) { .pencil-ul { transition: none; } }
+
+/* #1 scratchy checkbox — personalized only; the plain circle border is dropped
+   so the hand-drawn SVG box carries the affordance instead. */
+[data-mode='personalized'] .bar-check { border: none !important; background: none; }
+.scratch-check { overflow: visible; }
+.scratch-check .sc-box { stroke: var(--coral-strong); transition: stroke 0.2s ease; }
+.scratch-check .sc-tick {
+  stroke: var(--success);
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;   /* hidden until done, then strokes on */
+}
+.scratch-check.is-done .sc-box { stroke: var(--success); }
+.scratch-check.is-done .sc-tick {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.3s ease 0.05s;
+}
+@media (prefers-reduced-motion: reduce) { .scratch-check .sc-tick { transition: none; } }
 
 /* #2 torn paper edge on the Completed drawer */
 .tear-edge { display: block; width: 100%; height: 9px; color: var(--hairline); }

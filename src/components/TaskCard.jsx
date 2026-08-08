@@ -5,7 +5,7 @@ import MarkerRule from './MarkerRule'
 import { createPortal } from 'react-dom'
 import { fmtRange, fmtTime, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
-import { flashComplete, PencilUnderline } from './stickers/art'
+import { flashComplete, PencilUnderline, ScratchCheck } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -209,19 +209,23 @@ const TaskCard = forwardRef(function TaskCard(
           />
         )}
 
-        {/* checkbox */}
+        {/* checkbox — #1 scratchy hand-drawn box in personalized, clean circle otherwise */}
         <button
           aria-label={`Complete ${task.title}`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
-          className="bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-transform active:scale-90"
+          className={`bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center transition-transform active:scale-90 ${personalized ? '' : 'rounded-full border-2'}`}
         >
-          <motion.span
-            initial={false}
-            animate={{ scale: task.done ? 1 : 0 }}
-            className="block h-[11px] w-[11px] rounded-full"
-            style={{ background: 'currentColor' }}
-          />
+          {personalized ? (
+            <ScratchCheck done={task.done} size={22} />
+          ) : (
+            <motion.span
+              initial={false}
+              animate={{ scale: task.done ? 1 : 0 }}
+              className="block h-[11px] w-[11px] rounded-full"
+              style={{ background: 'currentColor' }}
+            />
+          )}
         </button>
 
         {tinted && (
@@ -234,17 +238,18 @@ const TaskCard = forwardRef(function TaskCard(
         <button
           onClick={(e) => { e.stopPropagation(); onEdit?.(task) }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="relative z-[1] flex-1 text-left text-[16px] font-semibold leading-tight tracking-[-0.01em]"
+          className="relative z-[1] min-w-0 flex-1 overflow-hidden text-left text-[16px] font-semibold leading-tight tracking-[-0.01em]"
         >
-          {task.title}
+          {/* the title shrink-wraps so #6's underline can span exactly its width */}
+          <span className="tl-text relative inline-block max-w-full translate-y-0 whitespace-nowrap align-bottom">
+            {task.title}
+            <PencilUnderline />
+          </span>
         </button>
 
         {task.recurrence && task.recurrence !== 'none' && (
           <Icon name="repeat" size={15} stroke={2} className="opacity-70" />
         )}
-
-        {/* #6 — pencil underline on hover */}
-        <PencilUnderline />
       </div>
 
       {tip && tip.label && createPortal(

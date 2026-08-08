@@ -118,9 +118,12 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
         )}
       </div>
 
-      {/* headers + docked unscheduled band */}
+      {/* headers + docked unscheduled band. The gutter labels this top strip as
+          the all-day / unscheduled row, so its role reads at a glance. */}
       <div className="flex shrink-0">
-        <div className="w-10 shrink-0 sm:w-12" />
+        <div className="flex w-10 shrink-0 items-end justify-end pb-1 pr-1.5 sm:w-12">
+          <span className="text-[9px] font-bold uppercase leading-none tracking-wide" style={{ color: 'var(--text-faint)' }}>all-day</span>
+        </div>
         <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${span}, minmax(0,1fr))`, gap: 5 }}>
           {days.map((d, i) => {
             const isToday = keys[i] === today

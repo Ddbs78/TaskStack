@@ -5,7 +5,7 @@ import Icon from './Icon'
 import { fracOf, fmtRange } from '../state/time'
 import { elapsedFraction, elapsedToday, overdueDays } from '../state/rollover'
 import { spanOf, BAR_MIN_PX } from '../state/bands'
-import { flashComplete, PencilUnderline } from './stickers/art'
+import { flashComplete, PencilUnderline, ScratchCheck } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -289,14 +289,25 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
             aria-label={`Complete ${task.title}`}
             onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bar-check relative z-[2] grid shrink-0 place-items-center rounded-full border-[1.5px]"
+            className={`bar-check relative z-[2] grid shrink-0 place-items-center ${personalized ? '' : 'rounded-full border-[1.5px]'}`}
             style={{ width: 'var(--cb)', height: 'var(--cb)' }}
           >
-            {task.done && <span className="rounded-full" style={{ width: 8, height: 8, background: 'currentColor' }} />}
+            {personalized
+              ? <ScratchCheck done={task.done} size={18} />
+              : task.done && <span className="rounded-full" style={{ width: 8, height: 8, background: 'currentColor' }} />}
           </button>
         )}
 
-        {showText && <span className="bar-title relative z-[2] flex-1 truncate text-[14px] font-medium">{task.title}</span>}
+        {showText && (
+          <span className="bar-title relative z-[2] flex min-w-0 flex-1 items-center text-[14px] font-medium">
+            {/* inline-grid shrink-wraps to the (possibly truncated) text, so #6's
+                underline matches the real title width — short OR long. */}
+            <span className="tl-text relative inline-grid min-w-0 max-w-full">
+              <span className="truncate">{task.title}</span>
+              <PencilUnderline />
+            </span>
+          </span>
+        )}
 
         {tag && showText && (
           <span
@@ -306,9 +317,6 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
             {tag}
           </span>
         )}
-
-        {/* #6 — a pencil line sketches under the title on hover (personalized) */}
-        {showText && <PencilUnderline />}
 
         {showChevron && (
           <button

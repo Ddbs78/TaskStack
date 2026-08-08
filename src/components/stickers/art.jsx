@@ -318,12 +318,46 @@ export function flashComplete(anchor, { personalized = false, calm = false } = {
 // #2 — the Completed drawer tears off the column instead of ending on a rule.
 // One deterministic path: it should look torn once, not restless.
 export function TearEdge() {
+  // A soft, rolling torn edge — smooth curves rather than a sawtooth, matching
+  // the approved rendering where the drawer bottom looks like torn paper, not a
+  // zigzag. Two overlaid waves give it a little irregularity.
   return (
-    <svg className="tear-edge craft-only" viewBox="0 0 200 9" preserveAspectRatio="none" aria-hidden="true">
+    <svg className="tear-edge craft-only" viewBox="0 0 200 10" preserveAspectRatio="none" aria-hidden="true">
       <path
-        d="M0 6 L8 3 L15 6.5 L23 2.5 L31 6 L40 3.5 L47 7 L56 3 L64 6.5 L73 2.5 L81 6 L90 4 L98 7 L107 3
-           L115 6.5 L124 3 L132 6 L141 4 L149 7 L158 3.5 L166 6.5 L175 3 L183 6 L192 4 L200 6.5 L200 9 L0 9 Z"
+        d="M0 5
+           C 10 2, 18 2, 26 5 S 42 8, 52 5 S 68 2, 78 5.5 S 96 8, 106 4.5
+           S 122 2, 132 5 S 150 8, 160 4.5 S 178 2, 188 5 S 197 6.5, 200 5
+           L200 10 L0 10 Z"
         fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+// #1 — the scratchy checkbox. Personalized only. Empty reads as a hand-drawn
+// coral square; done fills green and a check strokes itself on (CSS drives the
+// dash so it survives the preview's frozen animation clock). The completing
+// component still calls flashComplete for the burst; this is the resting mark.
+export function ScratchCheck({ done = false, size = 22 }) {
+  return (
+    <svg
+      className={`scratch-check ${done ? 'is-done' : ''}`}
+      width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
+    >
+      {/* wobbly rounded square — not a perfect rect, drawn like by hand */}
+      <path
+        className="sc-box"
+        d="M5.5 3.2 C 9 2.6, 15 2.8, 18.6 3.4 C 21 3.8, 21.4 6, 21 9
+           C 20.7 13, 21.2 17.5, 20.4 19.8 C 20 21.2, 17 21.2, 12.5 21.2
+           C 8 21.2, 4.2 21.3, 3.2 19.6 C 2.4 18, 2.7 13, 2.8 9
+           C 2.9 5.5, 3 3.8, 5.5 3.2 Z"
+        fill="none" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"
+      />
+      {/* the tick, drawn on stroke-by-stroke via dashoffset when .is-done */}
+      <path
+        className="sc-tick"
+        d="M6.5 12.4 L10.6 16.6 L18 7.4"
+        fill="none" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
       />
     </svg>
   )
