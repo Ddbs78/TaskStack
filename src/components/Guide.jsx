@@ -321,6 +321,54 @@ function MiniViews({ play, craft, motionOn }) {
   )
 }
 
+// The "right now" chapter's own demo: one task in focus, two choices, everything
+// else dimmed — the actual mechanic, not the view switcher (which `views` shows).
+function MiniRightNow({ play, craft, motionOn }) {
+  const enter = craft
+    ? { type: 'spring', stiffness: 420, damping: 22 }
+    : { duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }
+  return (
+    <div className="flex flex-col gap-2">
+      {/* the one surfaced task */}
+      <motion.div
+        className="flex items-center gap-2 px-3 py-2"
+        style={{
+          background: 'var(--task-blue-bg)', color: 'var(--task-blue-text)',
+          border: craft ? '2px solid var(--ink)' : '1px solid var(--hairline)',
+          borderRadius: craft ? 12 : 8,
+          boxShadow: craft ? '2px 2.5px 0 var(--ink-shadow)' : 'none',
+        }}
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={play ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0.4, y: 4, scale: 1 }}
+        transition={enter}
+      >
+        <span className="grid h-[15px] w-[15px] place-items-center rounded-full border-[1.5px]" style={{ borderColor: 'currentColor' }} />
+        <span className="text-[12px] font-bold">Email the landlord</span>
+      </motion.div>
+      {/* the only two actions */}
+      <div className="flex items-center gap-2">
+        {['done', 'not this one'].map((a, i) => (
+          <motion.span
+            key={a}
+            className="px-2.5 py-1 text-[11px] font-semibold"
+            style={{
+              background: i === 0 ? 'var(--success)' : 'var(--surface-2)',
+              color: i === 0 ? '#06281c' : 'var(--text-soft)',
+              border: craft ? '2px solid var(--ink)' : '1px solid var(--hairline)',
+              borderRadius: craft ? 9 : 6,
+            }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={play ? { opacity: 1, y: 0 } : { opacity: 0.3, y: 0 }}
+            transition={{ ...enter, delay: motionOn ? 0.1 + i * 0.1 : 0 }}
+          >
+            {a}
+          </motion.span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ---- chapters ---------------------------------------------------------------
 // One content model. `title`/`blurb` carry the personalized voice (gently
 // teasing); `proTitle`/`proBlurb` the professional one (plain and calm).
@@ -350,7 +398,7 @@ const CHAPTERS = [
     id: 'now', title: 'right now', proTitle: 'One task at a time', Art: CatLoaf,
     blurb: 'One task. Two choices: done, or not this one. Everything else dims away.',
     why: 'The bottleneck is starting, and the load that blocks starting is choosing. Every extra control here would re-add the very thing it removes.',
-    Demo: MiniViews,
+    Demo: MiniRightNow,
   },
   {
     id: 'finish', title: 'finishing gets loud', proTitle: 'Finishing is acknowledged', Art: PartyBean,
