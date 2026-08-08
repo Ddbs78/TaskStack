@@ -12,11 +12,24 @@ Last updated: **2026-08-07**, at commit `097fe9b`.
       check, sticker entrances, the now-line glide, the scratch-check tick draw-on, onboarding card
       transitions, and the guide's cube settle. These need the user's eyes.
 
-## 🐞 Found during verification (2026-08-08) — not yet addressed
+## ✅ Second polish pass (2026-08-08) — user callouts, all verified live
 
-- [ ] **Time popover doesn't dismiss on outside-click or Escape.** Open the "set time" popover in the input
-      bar, then click elsewhere / press Escape — it stays open. Pre-existing (`TimePopover.jsx` /
-      `InputBar.jsx`), not from this session's work. Low severity but worth a click-outside handler.
+- Professional completion toast → restrained green check (no bean); personalized keeps the bean.
+- Time popover now dismisses on outside-click / Escape (it had ignored `onClose` entirely); clock re-toggle
+  closes without a reopen loop.
+- Logo genuinely bigger: BrandMark tightens the exported viewBox (which had ~40% empty margin) to real
+  content bounds + `overflow:visible` so the tumble never clips. Header 60px, intro card-1 92px.
+- Personalized checkboxes reverted to the clean circle (the scratch box's colours read badly).
+- Intro cards fade/rise between steps; spotlight callout rewritten to never cover its target (card 4 clears
+  the now-line) and glides between steps.
+- Mode-select tiles rebuilt to match the approved mockup (TaskStack mini + paper-note-stack "4 more" /
+  smiley "4 lurking").
+- Input bar squares off in professional (14px).
+
+## 🐞 Known, still open (low severity)
+
+- [ ] **Inbox-zero `ZeroCinematic` is still the personalized cinematic in professional mode.** Only fires at
+      true inbox-zero (rare); professional should get a quieter version. Not yet done — flagged, not scoped.
 
 ## ✅ Build complete + verified (2026-08-08)
 
