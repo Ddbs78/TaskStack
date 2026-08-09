@@ -122,9 +122,11 @@ export default function Onboarding({ open, store, onFinish }) {
   const calloutRef = useRef(null)
   const retriesRef = useRef(0)
 
-  const s = STEPS[step]
+  // clamp so an out-of-range step can never read `undefined.kind` and blank the app
+  const stepIdx = Math.min(Math.max(0, step), STEPS.length - 1)
+  const s = STEPS[stepIdx]
   const calm = !!store.settings.reduceMotion
-  const last = step === STEPS.length - 1
+  const last = stepIdx === STEPS.length - 1
 
   // --- demo task lifecycle -------------------------------------------------
 
@@ -280,6 +282,17 @@ export default function Onboarding({ open, store, onFinish }) {
       }
       el.style.left = `${Math.round(clampX(left))}px`
       el.style.top = `${Math.round(clampY(top))}px`
+      if (first) {
+        // now that it's positioned, reveal it (fade only — no positional slide)
+        requestAnimationFrame(() => {
+          el.style.transition = 'opacity .2s ease'
+          el.style.opacity = '1'
+          // enable position glide for later re-places (scroll/resize)
+          requestAnimationFrame(() => {
+            el.style.transition = 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1), opacity .2s ease'
+          })
+        })
+      }
       first = false
     }
     place()
@@ -372,7 +385,9 @@ export default function Onboarding({ open, store, onFinish }) {
           aria-modal="true"
           aria-label="Introduction"
           data-intro-phase={phase}
-          style={{ ...T.panel, position: 'fixed', zIndex: 92, maxHeight: 'calc(100vh - 32px)' }}
+          // starts invisible; the placement effect fades it in AT its final
+          // position, so it never slides across the screen from a default corner
+          style={{ ...T.panel, position: 'fixed', zIndex: 92, maxHeight: 'calc(100vh - 32px)', opacity: 0 }}
         >
           {panel}
         </div>
@@ -494,31 +509,20 @@ function ModeTile({ selected, onClick, variant, name, desc }) {
         transition: 'border-color .18s, box-shadow .18s',
       }}
     >
-      {/* Deliberate coral corner wedge marks the selected tile. It sits in the
-          OPPOSITE corner from the check, so the check is never clipped or
-          covered — the user's "nothing may be cut off" note wins over the
-          happy accident. */}
+      {/* selection = a single clear orange check, fully visible (no corner wedge) */}
       {selected && (
         <span
           aria-hidden="true"
           style={{
-            position: 'absolute', left: 0, top: 0, width: 34, height: 34,
-            background: 'var(--coral)', clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+            position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 999,
+            display: 'grid', placeItems: 'center', zIndex: 2,
+            background: 'var(--coral)', color: '#fff',
+            boxShadow: '0 1px 4px rgba(0,0,0,.28)',
           }}
-        />
+        >
+          <Icon name="check" size={13} stroke={3.2} />
+        </span>
       )}
-      <span
-        aria-hidden="true"
-        style={{
-          position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: 999,
-          display: 'grid', placeItems: 'center',
-          border: `1.5px solid ${selected ? 'var(--coral)' : 'var(--hairline)'}`,
-          background: selected ? 'var(--coral)' : 'transparent',
-          color: '#fff',
-        }}
-      >
-        {selected && <Icon name="check" size={11} stroke={3} />}
-      </span>
       <span style={{ display: 'block', marginBottom: 8, position: 'relative' }}>
         <ModePreview variant={variant} />
       </span>

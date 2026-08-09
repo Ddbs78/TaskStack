@@ -237,43 +237,47 @@ export function ModePreview({ variant }) {
     <span
       aria-hidden="true"
       style={{
-        display: 'block', position: 'relative', height: 96, borderRadius: 10, overflow: 'hidden',
+        display: 'block', position: 'relative', height: 124, borderRadius: 10, overflow: 'hidden',
         background: pro ? 'var(--bg)' : '#fdf7ee',
         backgroundImage: pro ? 'none' : 'radial-gradient(rgba(27,27,34,.05) 1px, transparent 1px)',
         backgroundSize: pro ? undefined : '4px 4px',
       }}
     >
       {/* header */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px' }}>
-        <BrandMark variant="mark" height={12} fit />
-        <span style={{ font: `800 ${pro ? 8.5 : 9}px var(--font-sans)`, letterSpacing: '-.01em', color: pro ? 'var(--text)' : ink }}>TaskStack</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 9px' }}>
+        <BrandMark variant="mark" height={13} fit />
+        <span style={{ font: `800 ${pro ? 9 : 9.5}px var(--font-sans)`, letterSpacing: '-.01em', color: pro ? 'var(--text)' : ink }}>TaskStack</span>
       </span>
 
-      <span style={{ position: 'relative', display: 'block', height: 56, margin: '0 7px', borderTop: pro ? '1px solid var(--hairline)' : 'none' }}>
+      {/* body fills the full width; bars are wide and a third row keeps the
+          window looking real at the tile's wider aspect (no stretched pixels) */}
+      <span style={{ position: 'relative', display: 'block', height: 84, margin: '0 9px', borderTop: pro ? '1px solid var(--hairline)' : 'none' }}>
         {pro ? (
           <>
-            <span style={{ position: 'absolute', left: 0, top: 6, width: '64%', height: 12, borderRadius: 5, background: 'var(--blue)' }} />
-            <span style={{ position: 'absolute', left: 0, top: 22, width: '48%', height: 12, borderRadius: 5, background: 'var(--task-coral-tint-bg)', border: '1px solid var(--task-coral-tint-border)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 8, width: '82%', height: 13, borderRadius: 5, background: 'var(--blue)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 26, width: '64%', height: 13, borderRadius: 5, background: 'var(--task-coral-tint-bg)', border: '1px solid var(--task-coral-tint-border)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 44, width: '46%', height: 13, borderRadius: 5, background: 'color-mix(in srgb, var(--blue) 22%, transparent)' }} />
             {/* two rotated paper notes */}
-            <span style={{ position: 'absolute', left: 6, top: 38, width: 26, height: 11, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(-3deg)' }} />
-            <span style={{ position: 'absolute', left: 12, top: 37, width: 26, height: 11, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(2deg)' }} />
-            <span style={{ position: 'absolute', left: 44, top: 39, font: '700 7px var(--font-sans)', color: 'var(--text-soft)' }}>4 more</span>
-            <span style={{ position: 'absolute', left: '40%', top: 0, bottom: 0, width: 1.2, background: 'var(--now-line)' }} />
+            <span style={{ position: 'absolute', left: 6, top: 64, width: 30, height: 12, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(-3deg)' }} />
+            <span style={{ position: 'absolute', left: 13, top: 63, width: 30, height: 12, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(2deg)' }} />
+            <span style={{ position: 'absolute', left: 50, top: 66, font: '700 8px var(--font-sans)', color: 'var(--text-soft)' }}>4 more</span>
+            <span style={{ position: 'absolute', left: '60%', top: 0, bottom: 0, width: 1.4, background: 'var(--now-line)' }} />
           </>
         ) : (
           <>
-            <span style={{ position: 'absolute', left: 0, top: 6, width: '64%', height: 13, borderRadius: 6, background: '#4b89f7', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
-            <span style={{ position: 'absolute', left: 0, top: 24, width: '48%', height: 13, borderRadius: 6, background: '#e58a67', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 8, width: '82%', height: 14, borderRadius: 6, background: '#4b89f7', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 28, width: '64%', height: 14, borderRadius: 6, background: '#e58a67', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 48, width: '46%', height: 14, borderRadius: 6, background: '#F5C542', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
             {/* the antenna creature holding the overflow */}
-            <svg width="30" height="26" viewBox="0 0 44 38" style={{ position: 'absolute', left: 2, top: 32 }}>
+            <svg width="32" height="28" viewBox="0 0 44 38" style={{ position: 'absolute', left: 2, top: 56 }}>
               <ellipse cx="21" cy="24" rx="16" ry="12" fill="#7FD1C1" stroke={ink} strokeWidth="2.4" />
               <circle cx="15" cy="22" r="2" fill={ink} /><circle cx="27" cy="22" r="2" fill={ink} />
               <path d="M16 29c3 2.6 9 2.6 12 0" fill="none" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
               <path d="M9 15c1-5 5-8 9-8" fill="none" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
               <circle cx="19" cy="6" r="3.4" fill="#F5C542" stroke={ink} strokeWidth="2.2" />
             </svg>
-            <span style={{ position: 'absolute', left: 36, top: 40, font: '800 7.5px var(--font-sans)', color: ink }}>4 lurking</span>
-            <span style={{ position: 'absolute', left: '40%', top: 0, bottom: 0, width: 1.6, background: '#ff3b30' }} />
+            <span style={{ position: 'absolute', left: 40, top: 66, font: '800 8px var(--font-sans)', color: ink }}>4 lurking</span>
+            <span style={{ position: 'absolute', left: '60%', top: 0, bottom: 0, width: 1.6, background: '#ff3b30' }} />
           </>
         )}
       </span>

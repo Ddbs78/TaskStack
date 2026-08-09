@@ -133,7 +133,9 @@ export default function App() {
           }}
           aria-label="StackTask — go to today"
         >
-          <BrandMark variant="wordmark" height={42} tumbling={logoTumble || logoLoose} />
+          {/* fit tightens the viewBox so the mark fills its box — bigger logo,
+              same 42px header height */}
+          <BrandMark variant="wordmark" height={42} fit tumbling={logoTumble || logoLoose} />
         </button>
         <div className="flex items-center gap-1">
           <button

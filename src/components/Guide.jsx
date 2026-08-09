@@ -582,24 +582,19 @@ export default function Guide({ open, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, railH])
 
-  // remember where they left off
+  // The guide always opens at the top — a reference you read from the start,
+  // not a document you resume. (Resuming at the last-viewed chapter meant that
+  // once you'd scrolled to the end, every reopen dumped you at the end.)
   useEffect(() => {
     if (!open) return
-    const saved = Number(localStorage.getItem('flow.guide.chapter') || 0)
-    setActive(saved)
-    activeRef.current = saved
-    if (!saved) return
+    setActive(0)
+    activeRef.current = 0
     requestAnimationFrame(() => {
       const el = scrollRef.current
-      const node = el?.querySelector(`#gch-${CHAPTERS[saved]?.id}`)
-      if (node) { el.scrollTop = Math.max(0, node.offsetTop - CHAPTER_OFFSET); place() }
+      if (el) { el.scrollTop = 0; place() }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
-
-  useEffect(() => {
-    if (open) localStorage.setItem('flow.guide.chapter', String(active))
-  }, [active, open])
 
   const jumpTo = (id) => {
     const el = scrollRef.current
