@@ -229,6 +229,10 @@ export default function Onboarding({ open, store, onFinish }) {
   useLayoutEffect(() => {
     const el = calloutRef.current
     if (!el || phase !== 'spot' || !resolved) return undefined
+    // first placement of a step jumps (no transition) so the callout can't slide
+    // in from the top-left corner before it's positioned; re-places (scroll /
+    // resize) then glide.
+    let first = true
     const place = () => {
       const r = resolved.getRect()
       const vw = window.innerWidth
@@ -247,10 +251,9 @@ export default function Onboarding({ open, store, onFinish }) {
       const w = 380
       const h = el.offsetHeight
       const G = 20
-      // glide between steps rather than jump
       Object.assign(el.style, {
         right: 'auto', bottom: 'auto', width: `${w}px`,
-        transition: 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1)',
+        transition: first ? 'none' : 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1)',
       })
       const clampX = (x) => Math.max(16, Math.min(vw - w - 16, x))
       const clampY = (y) => Math.max(16, Math.min(vh - h - 16, y))
@@ -277,6 +280,7 @@ export default function Onboarding({ open, store, onFinish }) {
       }
       el.style.left = `${Math.round(clampX(left))}px`
       el.style.top = `${Math.round(clampY(top))}px`
+      first = false
     }
     place()
     const ro = new ResizeObserver(place)
@@ -430,7 +434,7 @@ function WelcomeArt({ calm }) {
   }, [calm])
   return (
     <div style={{ display: 'grid', placeItems: 'center', padding: '26px 0 10px' }}>
-      <BrandMark variant="wordmark" height={92} tumbling={!settled} />
+      <BrandMark variant="wordmark" height={92} fit tumbling={!settled} />
     </div>
   )
 }

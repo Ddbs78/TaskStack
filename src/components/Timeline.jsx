@@ -4,6 +4,7 @@ import TaskCard from './TaskCard'
 import TimedBar from './TimedBar'
 import { addDays, dateKey, startOfDay, todayKey, daysBetween, formatHeader, formatShort, useIsMobile, nowFraction, fmtTime } from '../state/time'
 import { dayBands, packLanes, OVERDUE_VISIBLE, applyManualOrder, hasManualOrder } from '../state/bands'
+import { overdueDays } from '../state/rollover'
 import Sticker from './stickers/Sticker'
 import { pickWaiting, CornerFold } from './stickers/art'
 import MarkerRule from './MarkerRule'
@@ -181,6 +182,9 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
   const { rows, laneCount } = packLanes(bars, dayWidth)
   const { Art, rest } = pickWaiting(key)
   const manual = hasManualOrder(bars)
+  // clicking the capped pile EXPANDS it to reveal the hidden tasks; the explicit
+  // "move to tomorrow" button is the only thing that bumps them
+  const [showHidden, setShowHidden] = useState(false)
 
   // Reorder writes an explicit sortIndex for the whole column, so the new order
   // survives a reload and the reset chip has something concrete to clear.
@@ -279,13 +283,38 @@ function DayCol({ date, dayWidth, mobile, isToday, store, today, nowMin, tintEna
                 paper={hiddenOverdue.length}
                 paperLabel={`${hiddenOverdue.length} more overdue`}
                 paperWidth={Math.min(168, dayWidth - 32)}
-                title={personalized ? `${hiddenOverdue.length} still lurking` : `${hiddenOverdue.length} more overdue`}
-                onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}>
+                title={showHidden ? 'show less' : (personalized ? `${hiddenOverdue.length} still lurking — tap to see them` : `${hiddenOverdue.length} more overdue — tap to see them`)}
+                onClick={() => setShowHidden((v) => !v)}>
                 <span className="text-[13px] font-bold" style={{ color: 'var(--text-soft)' }}>
-                  {hiddenOverdue.length} still lurking
+                  {hiddenOverdue.length} {personalized ? 'still lurking' : 'more overdue'}
                 </span>
               </Sticker>
-              <button onClick={() => onBump?.(hiddenOverdue.map((t) => t.id))}
+
+              {/* expanded: the actual hidden tasks, each completable / editable */}
+              {showHidden && (
+                <div className="mt-0.5 flex w-full flex-col gap-1" style={{ maxWidth: Math.min(240, dayWidth - 8) }}>
+                  {hiddenOverdue.map((t) => (
+                    <div key={t.id}
+                      className="inked-sm task-surface flex items-center gap-2 overflow-hidden rounded-[var(--radius-bar)] px-2 py-1.5"
+                      style={{ '--rail': 'var(--coral)', background: 'var(--bar-bg, var(--task-coral-bg))', color: 'var(--bar-fg, var(--task-coral-text))' }}>
+                      <button
+                        aria-label={`Complete ${t.title}`}
+                        onClick={() => onToggle(t.id)}
+                        className="grid h-[16px] w-[16px] shrink-0 place-items-center rounded-full border-2"
+                        style={{ borderColor: 'currentColor' }}
+                      />
+                      <button onClick={() => onEdit?.(t)} className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold">
+                        {t.title}
+                      </button>
+                      <span className="tabular shrink-0 text-[9px] font-extrabold tracking-wide" style={{ opacity: 0.6 }}>
+                        {overdueDays(t, today)} DAY{overdueDays(t, today) > 1 ? 'S' : ''} AGO
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button onClick={() => { onBump?.(hiddenOverdue.map((t) => t.id)); setShowHidden(false) }}
                 className="ml-1 rounded-full px-2 py-1 text-[12px] font-bold"
                 style={{ color: 'var(--text-faint)' }}>
                 {personalized ? "bump 'em to tomorrow" : 'Move to tomorrow'}

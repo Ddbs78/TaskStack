@@ -125,6 +125,9 @@ export default function SettingsModal({ open, onClose, store, onOpenGuide, onRep
               <Row label="Reduce motion" hint="Calmer animations">
                 <Toggle on={settings.reduceMotion} onChange={(v) => setSettings({ reduceMotion: v })} />
               </Row>
+              <Row label="Completion celebrations" hint="The moment when you finish a task">
+                <Toggle on={settings.celebrations !== false} onChange={(v) => setSettings({ celebrations: v })} />
+              </Row>
             </Section>
 
             <Section title="Recurring tasks" hint="Default repeat applied to new tasks">

@@ -54,22 +54,30 @@ export default function App() {
   const actions = {
     complete: (id) => {
       const today = todayKey()
-      // Inbox zero = nothing left that is due today or already overdue. Checked
-      // BEFORE the toggle. The old test (was-overdue AND no overdue left) fired
-      // mid-session whenever you cleared an overdue item while other work
-      // remained, and never fired at all if nothing had gone overdue.
+      const task = store.tasks.find((x) => x.id === id)
+      // Was THIS task itself due today-or-earlier? Completing a future-dated task
+      // must never fire the inbox-zero moment — and if nothing was due to begin
+      // with, clearing future work shouldn't keep re-triggering it either. That
+      // was the bug: with an empty today, stillDue was always 0, so every single
+      // completion read as "inbox zero".
+      const wasDue = !!task && task.date <= today
       const stillDue = store.tasks.filter(
         (x) => x.id !== id && !x.done && (x.date <= today)
       ).length
       const doneToday = store.tasks.filter((x) => x.done && x.date === today).length + 1
       const left = store.tasks.filter((x) => x.id !== id && !x.done).length
       store.toggleTask(id)
-      setCelebration({
-        id: Date.now(),
-        type: stillDue === 0 ? 'zero' : 'one',
-        done: doneToday,
-        left,
-      })
+      // celebrations can be switched off entirely (§ settings)
+      if (store.settings.celebrations !== false) {
+        setCelebration({
+          id: Date.now(),
+          // inbox-zero only on the genuine transition: you just cleared a due
+          // task AND none remain. Otherwise the quiet per-task acknowledgement.
+          type: wasDue && stillDue === 0 ? 'zero' : 'one',
+          done: doneToday,
+          left,
+        })
+      }
       showToast('Task completed', () => store.toggleTask(id))
     },
     remove: (id) => {
@@ -125,7 +133,7 @@ export default function App() {
           }}
           aria-label="StackTask — go to today"
         >
-          <BrandMark variant="wordmark" height={60} tumbling={logoTumble || logoLoose} />
+          <BrandMark variant="wordmark" height={42} tumbling={logoTumble || logoLoose} />
         </button>
         <div className="flex items-center gap-1">
           <button

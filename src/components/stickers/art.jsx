@@ -18,6 +18,34 @@
 // response, so the reaction feels characterful rather than a generic scale-up.
 
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+
+// The completion mark drawn INSIDE a checkbox (both modes). When `completing`,
+// the circle fills green and the tick strokes itself on in place — so the
+// animation is part of the checkbox rather than a separate overlay pasted on
+// top. Renders nothing while empty (the button's own border is the circle).
+export function CheckMark({ done = false, completing = false }) {
+  const filled = done || completing
+  if (!filled) return null
+  return (
+    <svg viewBox="0 0 24 24" className="absolute inset-0 h-full w-full" aria-hidden="true">
+      <motion.circle
+        cx="12" cy="12" r="12" fill="var(--success)"
+        initial={completing ? { scale: 0.2, opacity: 0.4 } : false}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: completing ? 0.2 : 0, ease: [0.22, 0.61, 0.36, 1] }}
+        style={{ transformOrigin: '12px 12px' }}
+      />
+      <motion.path
+        d="M6.4 12.5 L10.4 16.3 L17.6 8"
+        fill="none" stroke="#06281c" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+        initial={completing ? { pathLength: 0 } : { pathLength: 1 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: completing ? 0.26 : 0, ease: 'easeOut', delay: completing ? 0.08 : 0 }}
+      />
+    </svg>
+  )
+}
 
 const CREAM = '#FFF8EE'
 const BLUSH = '#F58FA8'
@@ -186,24 +214,18 @@ const prefersReduced = () =>
 // hover / tilt-and-sweep when cleared, all in CSS (see .note-stack).
 // ---------------------------------------------------------------------------
 export function PaperNoteStack({ count = 0, label, calm = false, width = 128, height = 40, onClick, title }) {
-  const [gone, setGone] = useState(false)
   const still = calm || prefersReduced()
 
-  const fire = () => {
-    if (gone) return
-    if (still || !onClick) { onClick?.(); return }
-    // let the pile tilt away before the data changes underneath it
-    setGone(true)
-    setTimeout(() => onClick(), 260)
-  }
-
+  // Click just fires onClick (which now EXPANDS the pile). The old tilt-away
+  // sweep was for the bump action; the pile no longer bumps on click, so
+  // sweeping it away here would fight the expand.
   return (
     <button
       type="button"
-      onClick={fire}
+      onClick={() => onClick?.()}
       title={title}
       aria-label={title}
-      className={`note-stack${gone ? ' is-gone' : ''}${still ? ' calm' : ''}`}
+      className={`note-stack${still ? ' calm' : ''}`}
       style={{ '--ns-w': `${width}px`, '--ns-h': `${height}px` }}
     >
       <span className="note n-3" aria-hidden="true"><span className="n-lines"><i /><i /></span></span>

@@ -224,64 +224,59 @@ export function ViewsArt() {
 
 // --- the two mode preview tiles on the last card ----------------------------
 
-// A faithful mini of each mode — matches the approved "make it yours" mockup:
-// a little TaskStack window with the real header mark, a red now-line, two task
-// bars, and the mode's own overflow object (paper-note stack in pro, a sticker
-// character in personalized). HTML rather than SVG so the real BrandMark can be
-// embedded for logo consistency.
+// A faithful mini of each mode — ported directly from the approved "make it
+// yours" mockup. Professional: clean window, blue bar + coral OUTLINE bar, two
+// little rotated paper notes ("4 more"), a red now-line. Personalized: paper
+// grain, ink-outlined bars with hard offset shadows, the teal antenna creature
+// holding the overflow ("4 lurking"). The header cube is the real BrandMark so
+// the logo stays identical everywhere.
 export function ModePreview({ variant }) {
   const pro = variant === 'professional'
+  const ink = '#1b1b22'
   return (
     <span
       aria-hidden="true"
       style={{
-        display: 'block', position: 'relative', height: 118, borderRadius: 12, overflow: 'hidden',
-        background: pro ? 'var(--surface)' : 'var(--bg-soft)',
-        border: pro ? '1px solid var(--hairline)' : `2px solid ${INK}`,
-        boxShadow: pro ? 'none' : `2px 2.5px 0 rgba(0,0,0,.18)`,
-        backgroundImage: pro ? 'none' : 'radial-gradient(rgba(120,90,60,.16) 1px, transparent 1px)',
-        backgroundSize: pro ? undefined : '6px 6px',
+        display: 'block', position: 'relative', height: 96, borderRadius: 10, overflow: 'hidden',
+        background: pro ? 'var(--bg)' : '#fdf7ee',
+        backgroundImage: pro ? 'none' : 'radial-gradient(rgba(27,27,34,.05) 1px, transparent 1px)',
+        backgroundSize: pro ? undefined : '4px 4px',
       }}
     >
       {/* header */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 9px 5px' }}>
-        <BrandMark variant="mark" height={13} />
-        <span style={{ font: '800 10px var(--font-sans)', color: 'var(--text)' }}>TaskStack</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px' }}>
+        <BrandMark variant="mark" height={12} fit />
+        <span style={{ font: `800 ${pro ? 8.5 : 9}px var(--font-sans)`, letterSpacing: '-.01em', color: pro ? 'var(--text)' : ink }}>TaskStack</span>
       </span>
-      <span style={{ display: 'block', height: 1, background: pro ? 'var(--hairline)' : 'transparent', margin: '0 9px' }} />
 
-      {/* now-line */}
-      <span style={{ position: 'absolute', top: 26, bottom: 0, left: '58%', width: 1.5, background: 'var(--now-line)' }} />
-
-      {/* two task bars */}
-      <span style={{ position: 'absolute', left: 9, top: 34, width: '62%', height: 13, borderRadius: pro ? 4 : 7,
-        background: 'var(--task-blue-bg)', border: pro ? 'none' : `2px solid ${INK}`,
-        borderLeft: pro ? '2px solid var(--blue)' : `2px solid ${INK}` }} />
-      <span style={{ position: 'absolute', left: 9, top: 52, width: '50%', height: 13, borderRadius: pro ? 4 : 7,
-        background: pro ? 'var(--task-coral-tint-bg)' : 'var(--task-coral-bg)', border: pro ? 'none' : `2px solid ${INK}`,
-        borderLeft: pro ? '2px solid var(--coral)' : `2px solid ${INK}` }} />
-
-      {/* overflow object — the whole point of the comparison */}
-      {pro ? (
-        <span style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ position: 'relative', width: 30, height: 20 }}>
-            <span style={{ position: 'absolute', inset: '4px 0 0 4px', borderRadius: 4, background: 'var(--task-coral-tint-bg)', border: '1px solid var(--task-coral-tint-border)' }} />
-            <span style={{ position: 'absolute', inset: '2px 2px 2px 2px', borderRadius: 4, background: 'var(--task-coral-tint-bg)', border: '1px solid var(--task-coral-tint-border)' }} />
-            <span style={{ position: 'absolute', inset: '0 4px 4px 0', borderRadius: 4, background: 'var(--surface)', border: '1px solid var(--task-coral-tint-border)' }} />
-          </span>
-          <span style={{ font: '700 9px var(--font-sans)', color: 'var(--text-soft)' }}>4 more</span>
-        </span>
-      ) : (
-        <span style={{ position: 'absolute', left: 12, bottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <svg width="26" height="26" viewBox="0 0 30 30">
-            <circle cx="15" cy="15" r="13" fill="#8FD6B0" stroke={INK} strokeWidth="1.8" />
-            <circle cx="10.5" cy="13" r="1.7" fill={INK} />
-            <circle cx="19.5" cy="13" r="1.7" fill={INK} />
-            <path d="M10 19c3 3 7 3 10 0" stroke={INK} strokeWidth="1.7" fill="none" strokeLinecap="round" />
-          </svg>
-          <span style={{ font: '700 9px var(--font-sans)', color: 'var(--text)' }}>4 lurking</span>
-        </span>
-      )}
+      <span style={{ position: 'relative', display: 'block', height: 56, margin: '0 7px', borderTop: pro ? '1px solid var(--hairline)' : 'none' }}>
+        {pro ? (
+          <>
+            <span style={{ position: 'absolute', left: 0, top: 6, width: '64%', height: 12, borderRadius: 5, background: 'var(--blue)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 22, width: '48%', height: 12, borderRadius: 5, background: 'var(--task-coral-tint-bg)', border: '1px solid var(--task-coral-tint-border)' }} />
+            {/* two rotated paper notes */}
+            <span style={{ position: 'absolute', left: 6, top: 38, width: 26, height: 11, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(-3deg)' }} />
+            <span style={{ position: 'absolute', left: 12, top: 37, width: 26, height: 11, borderRadius: 3, background: 'var(--surface)', border: '1px solid var(--hairline)', transform: 'rotate(2deg)' }} />
+            <span style={{ position: 'absolute', left: 44, top: 39, font: '700 7px var(--font-sans)', color: 'var(--text-soft)' }}>4 more</span>
+            <span style={{ position: 'absolute', left: '40%', top: 0, bottom: 0, width: 1.2, background: 'var(--now-line)' }} />
+          </>
+        ) : (
+          <>
+            <span style={{ position: 'absolute', left: 0, top: 6, width: '64%', height: 13, borderRadius: 6, background: '#4b89f7', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
+            <span style={{ position: 'absolute', left: 0, top: 24, width: '48%', height: 13, borderRadius: 6, background: '#e58a67', border: `1.6px solid ${ink}`, boxShadow: '1.6px 2px 0 rgba(27,27,34,.35)' }} />
+            {/* the antenna creature holding the overflow */}
+            <svg width="30" height="26" viewBox="0 0 44 38" style={{ position: 'absolute', left: 2, top: 32 }}>
+              <ellipse cx="21" cy="24" rx="16" ry="12" fill="#7FD1C1" stroke={ink} strokeWidth="2.4" />
+              <circle cx="15" cy="22" r="2" fill={ink} /><circle cx="27" cy="22" r="2" fill={ink} />
+              <path d="M16 29c3 2.6 9 2.6 12 0" fill="none" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M9 15c1-5 5-8 9-8" fill="none" stroke={ink} strokeWidth="2.2" strokeLinecap="round" />
+              <circle cx="19" cy="6" r="3.4" fill="#F5C542" stroke={ink} strokeWidth="2.2" />
+            </svg>
+            <span style={{ position: 'absolute', left: 36, top: 40, font: '800 7.5px var(--font-sans)', color: ink }}>4 lurking</span>
+            <span style={{ position: 'absolute', left: '40%', top: 0, bottom: 0, width: 1.6, background: '#ff3b30' }} />
+          </>
+        )}
+      </span>
     </span>
   )
 }

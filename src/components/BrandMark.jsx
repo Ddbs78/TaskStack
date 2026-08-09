@@ -15,6 +15,8 @@ export default function BrandMark({
   variant = 'wordmark',   // 'wordmark' | 'mark'
   height = 30,
   tumbling = false,
+  fit = false,            // tighten the viewBox to real content (fills the box);
+                          // off keeps the exported margins = the original look
   className = '',
   style,
 }) {
@@ -43,6 +45,7 @@ export default function BrandMark({
   // bounds (measured at rest) plus padding for the tumble, so `height` maps to
   // the visible mark. Runs on mount and on theme/variant swap.
   useEffect(() => {
+    if (!fit) return
     const el = hostRef.current?.querySelector('svg')
     if (!el) return
     try {
@@ -54,7 +57,7 @@ export default function BrandMark({
       const p = 6
       el.setAttribute('viewBox', `${b.x - p} ${b.y - p} ${b.width + p * 2} ${b.height + p * 2}`)
     } catch {}
-  }, [svg])
+  }, [svg, fit])
 
   // Each cube's three faces are pre-grouped under class="cube" (see
   // src/assets/brand/README.md — the raw Illustrator export left all 9 face

@@ -247,11 +247,51 @@ export default function Celebration({ event, onDone, calm = false, undoVisible =
     <AnimatePresence>
       {event && !skipped && (
         zero ? (
-          <ZeroCinematic key={event.id} onSkip={skip} still={still} />
+          personalized
+            ? <ZeroCinematic key={event.id} onSkip={skip} still={still} />
+            : <ProZero key={event.id} onSkip={skip} still={still} />
         ) : (
           <OneToast key={event.id} done={event.done} left={event.left} onSkip={skip} still={still} stacked={undoVisible} personalized={personalized} />
         )
       )}
     </AnimatePresence>
+  )
+}
+
+// Professional inbox-zero: no cinematic — a single Apple-Pay-style green check
+// that draws itself, with a quiet line. Tap anywhere to dismiss.
+function ProZero({ onSkip, still }) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-[70] grid place-items-center"
+      style={{ background: 'color-mix(in srgb, var(--bg) 78%, transparent)' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onSkip}
+    >
+      <motion.div
+        className="flex flex-col items-center gap-3"
+        initial={still ? { opacity: 0 } : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.24, ease: [0.22, 0.61, 0.36, 1] }}
+      >
+        <svg width="72" height="72" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" fill="var(--success)" />
+          <motion.path
+            d="M6.5 12.4 L10.4 16 L17.4 8"
+            fill="none" stroke="#06281c" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+            initial={still ? { pathLength: 1 } : { pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: still ? 0 : 0.4, ease: 'easeOut', delay: still ? 0 : 0.1 }}
+          />
+        </svg>
+        <div className="text-center">
+          <div className="text-[17px] font-bold" style={{ color: 'var(--text)' }}>All clear for today</div>
+          <div className="text-[13px]" style={{ color: 'var(--text-soft)' }}>Nothing due or overdue</div>
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }

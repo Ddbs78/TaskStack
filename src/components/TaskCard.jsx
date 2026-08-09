@@ -5,7 +5,7 @@ import MarkerRule from './MarkerRule'
 import { createPortal } from 'react-dom'
 import { fmtRange, fmtTime, relativeDayLabel, todayKey } from '../state/time'
 import { overdueDays, elapsedFraction } from '../state/rollover'
-import { flashComplete, PencilUnderline } from './stickers/art'
+import { CheckMark, PencilUnderline } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -56,6 +56,15 @@ const TaskCard = forwardRef(function TaskCard(
     color: tinted ? `var(--bar-fg, var(--task-${hue}-tint-text))` : `var(--bar-fg, var(--task-${hue}-text))`,
   }
   const [pressing, setPressing] = useState(false)
+  const [completing, setCompleting] = useState(false)
+  // play the in-checkbox tick, THEN toggle (which exits the card) — so the two
+  // read as one motion instead of a check slapped on after the card vanishes
+  const onCheck = (e) => {
+    e.stopPropagation()
+    if (task.done || completing) { onToggle(task.id); return }
+    setCompleting(true)
+    setTimeout(() => onToggle(task.id), 340)
+  }
   const timer = useRef(null)
   const startPt = useRef(null)
   const moved = useRef(false)
@@ -209,20 +218,15 @@ const TaskCard = forwardRef(function TaskCard(
           />
         )}
 
-        {/* checkbox — a clean circle in both modes (the completion burst carries
-            the mode flavour: Apple-Pay check in pro, scratchy tick in personalized) */}
+        {/* checkbox — the tick animates INSIDE the circle (fill + draw-on), then
+            the card exits. No floating overlay pasted on top. */}
         <button
           aria-label={`Complete ${task.title}`}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
-          className="bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-transform active:scale-90"
+          onClick={onCheck}
+          className={`bar-check relative z-[1] grid h-[22px] w-[22px] shrink-0 place-items-center overflow-hidden rounded-full transition-transform active:scale-90 ${task.done || completing ? '' : 'border-2'}`}
         >
-          <motion.span
-            initial={false}
-            animate={{ scale: task.done ? 1 : 0 }}
-            className="block h-[11px] w-[11px] rounded-full"
-            style={{ background: 'currentColor' }}
-          />
+          <CheckMark done={task.done} completing={completing} />
         </button>
 
         {tinted && (

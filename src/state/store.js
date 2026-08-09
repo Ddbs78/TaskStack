@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS = {
   elapsedStyle: 'tint', // off | tint | hatch — how elapsed time reads on today's tasks
   notifications: false,
   reduceMotion: false,
+  celebrations: true, // completion celebrations (toast / inbox-zero moment)
   aiKey: '',
   aiModel: 'claude-haiku-4-5',
   weekAutoSize: true, // week segments size to their content; off = six equal segments

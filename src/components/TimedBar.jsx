@@ -5,7 +5,7 @@ import Icon from './Icon'
 import { fracOf, fmtRange } from '../state/time'
 import { elapsedFraction, elapsedToday, overdueDays } from '../state/rollover'
 import { spanOf, BAR_MIN_PX } from '../state/bands'
-import { flashComplete, PencilUnderline } from './stickers/art'
+import { CheckMark, PencilUnderline } from './stickers/art'
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const snap15 = (m) => Math.round(m / 15) * 15
@@ -111,6 +111,15 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
   }
 
   const draggingRef = useRef(false)
+
+  // in-checkbox completion: play the tick, then toggle (which exits the bar)
+  const [completing, setCompleting] = useState(false)
+  const onCheck = (e) => {
+    e.stopPropagation()
+    if (task.done || completing) { onToggle(task.id); return }
+    setCompleting(true)
+    setTimeout(() => onToggle(task.id), 340)
+  }
 
   // ---- hover peek (portaled, fixed → escapes the scroll clip) -----------------
   const [peek, setPeek] = useState(null)
@@ -287,12 +296,12 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
         {showCircle && (
           <button
             aria-label={`Complete ${task.title}`}
-            onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
+            onClick={onCheck}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bar-check relative z-[2] grid shrink-0 place-items-center rounded-full border-[1.5px]"
+            className={`bar-check relative z-[2] grid shrink-0 place-items-center overflow-hidden rounded-full ${task.done || completing ? '' : 'border-[1.5px]'}`}
             style={{ width: 'var(--cb)', height: 'var(--cb)' }}
           >
-            {task.done && <span className="rounded-full" style={{ width: 8, height: 8, background: 'currentColor' }} />}
+            <CheckMark done={task.done} completing={completing} />
           </button>
         )}
 
@@ -355,11 +364,11 @@ const TimedBar = forwardRef(function TimedBar({ task, dayWidth, lane, variant = 
           <div className="mb-1 flex items-start gap-2">
             <button
               aria-label={`Complete ${task.title}`}
-              onClick={(e) => { flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
-              className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2"
+              onClick={onCheck}
+              className={`mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center overflow-hidden rounded-full ${task.done || completing ? '' : 'border-2'}`}
               style={{ borderColor: `var(--task-${hue}-bg)` }}
             >
-              {task.done && <span className="h-[9px] w-[9px] rounded-full" style={{ background: `var(--task-${hue}-bg)` }} />}
+              <CheckMark done={task.done} completing={completing} />
             </button>
             <span className="text-[14px] font-semibold leading-tight" style={{ color: 'var(--text)' }}>{task.title}</span>
           </div>

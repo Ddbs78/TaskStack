@@ -7,7 +7,6 @@ import Icon from '../Icon'
 import { addDays, dateKey, daysBetween, formatShort, startOfDay, todayKey, fmtTime, fmtRange, useIsMobile } from '../../state/time'
 import { dayBands, OVERDUE_VISIBLE } from '../../state/bands'
 import { elapsedFraction, elapsedToday } from '../../state/rollover'
-import { flashComplete } from '../stickers/art'
 
 // Six 4-hour segments cover the whole day with no scrolling. Tapping one opens
 // it to hourly detail while its neighbours fold up, so total height never
@@ -139,20 +138,19 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
                   <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: isToday ? 'var(--coral-strong)' : 'var(--text-faint)' }}>{s.wd}</div>
                   <div className="font-display text-[17px]" style={{ color: isToday ? 'var(--text)' : 'var(--text-soft)' }}>{s.day}</div>
                 </button>
-                {/* On days other than today, unscheduled work docks here, fused
-                    to the top of the grid. Today's floats to the now-line instead. */}
-                {!isToday && (
-                  <DockedUnscheduled
-                    bands={b}
-                    dayKey={keys[i]}
-                    calm={calm}
-                    personalized={personalized}
-                    variant={variant}
-                    onToggle={onToggle}
-                    onEdit={onEdit}
-                    onBump={actions?.bump}
-                  />
-                )}
+                {/* All-day / unscheduled work docks in this top band for EVERY
+                    day, today included, so it lines up with the "all-day" gutter
+                    label instead of floating down at the now-line. */}
+                <DockedUnscheduled
+                  bands={b}
+                  dayKey={keys[i]}
+                  calm={calm}
+                  personalized={personalized}
+                  variant={variant}
+                  onToggle={onToggle}
+                  onEdit={onEdit}
+                  onBump={actions?.bump}
+                />
               </div>
             )
           })}
@@ -245,21 +243,7 @@ export default function Week({ store, now, onEdit, actions, focusDay, onDrill })
 
 // ---- one day column ---------------------------------------------------------
 function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, elapsedStyle, variant, calm, personalized, onToggle, onDelete, onEdit, onUncomplete, onBump }) {
-  const { overdue, timed, anytime, completed } = bands
-  const unscheduled = [...overdue, ...anytime]
-
-  // Today's unscheduled work rides the now-line. Timed blocks always win their
-  // slot — their position carries information unscheduled tasks don't have — so
-  // the pile dodges: full width, then narrowed beside, then collapsed to a tag.
-  const blocking = isToday
-    ? timed.filter((t) => {
-        const s = t.start ?? 0
-        const e = t.end != null && t.end > s ? t.end : s + 30
-        return nowMin >= s - 30 && nowMin <= e + 30
-      }).length
-    : 0
-  const floatMode = blocking === 0 ? 'full' : blocking === 1 ? 'dodge' : 'tag'
-  const { Art, rest } = pickWaiting(dayKey)
+  const { timed, completed } = bands
 
   return (
     <div className="relative min-w-0" style={{ background: isToday ? 'var(--bg-soft)' : 'transparent', borderRadius: 8 }}>
@@ -306,50 +290,8 @@ function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, el
         )
       })}
 
-      {/* today's floating unscheduled pile */}
-      {isToday && unscheduled.length > 0 && (
-        <div
-          className="absolute z-[15]"
-          style={{
-            top: yOf(nowMin) + 4,
-            transition: calm ? 'none' : 'top .42s var(--ease-spring)',
-            ...(floatMode === 'full' ? { left: 2, right: 2 }
-              : floatMode === 'dodge' ? { left: '54%', right: 2 }
-              : { right: 1, width: 'auto' }),
-          }}
-        >
-          {floatMode === 'tag' ? (
-            <Sticker
-              Art={Art} rest={rest} size={30} calm={calm}
-              personalized={personalized}
-              paper={unscheduled.length}
-              paperLabel={`${unscheduled.length}`}
-              paperWidth={40} paperHeight={22}
-              title={`${unscheduled.length} unscheduled`}
-              onClick={() => onEdit?.(unscheduled[0])}
-              className="rounded-full px-1.5 py-0.5"
-              style={{ background: 'var(--surface-2)', border: 'var(--ink-w) solid var(--ink)' }}
-            >
-              <span className="text-[9px] font-bold" style={{ color: 'var(--coral-strong)' }}>{unscheduled.length}</span>
-            </Sticker>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {unscheduled.slice(0, floatMode === 'dodge' ? 1 : 2).map((t) => (
-                <MiniChip key={t.id} task={t} overdue={overdue.includes(t)} variant={variant} personalized={personalized} onToggle={onToggle} onEdit={onEdit} />
-              ))}
-              {unscheduled.length > (floatMode === 'dodge' ? 1 : 2) && (
-                <button
-                  onClick={() => onBump?.(unscheduled.slice(floatMode === 'dodge' ? 1 : 2).map((t) => t.id))}
-                  className="rounded-md px-1 py-0.5 text-left text-[9px] font-bold"
-                  style={{ background: 'color-mix(in srgb, var(--coral) 22%, transparent)', color: 'var(--coral-strong)', border: '1.5px dashed var(--coral-strong)' }}
-                >
-                  +{unscheduled.length - (floatMode === 'dodge' ? 1 : 2)} waiting
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      {/* today's unscheduled work now docks in the top all-day band with every
+          other day (see the header row), so nothing floats at the now-line here */}
 
       {completed.length > 0 && (
         <div className="absolute inset-x-0" style={{ top: BODY_H - 2 }}>
@@ -363,6 +305,7 @@ function DayColumn({ bands, dayKey, isToday, yOf, nowMin, today, tintEnabled, el
 // ---- docked unscheduled band (non-today columns) -----------------------------
 function DockedUnscheduled({ bands, dayKey, calm, personalized, variant, onToggle, onEdit, onBump }) {
   const items = [...bands.overdue, ...bands.anytime]
+  const [showHidden, setShowHidden] = useState(false)
   if (!items.length) return <div style={{ height: 6 }} />
   const shown = items.slice(0, OVERDUE_VISIBLE)
   const hidden = items.slice(OVERDUE_VISIBLE)
@@ -375,24 +318,35 @@ function DockedUnscheduled({ bands, dayKey, calm, personalized, variant, onToggl
       {shown.map((t) => (
         <MiniChip key={t.id} task={t} overdue={bands.overdue.includes(t)} variant={variant} personalized={personalized} onToggle={onToggle} onEdit={onEdit} />
       ))}
+      {/* expanded hidden items — reveal, don't bump */}
+      {showHidden && hidden.map((t) => (
+        <MiniChip key={t.id} task={t} overdue={bands.overdue.includes(t)} variant={variant} personalized={personalized} onToggle={onToggle} onEdit={onEdit} />
+      ))}
       <AnimatePresence>
         {hidden.length > 0 && (
           <Sticker
             key="pile" Art={Art} rest={rest} size={28} calm={calm}
             personalized={personalized}
-            paper={hidden.length}
+            paper={showHidden ? 0 : hidden.length}
             paperLabel={`+${hidden.length}`}
             paperWidth={52} paperHeight={24}
-            title={personalized
-              ? `${hidden.length} still lurking — bump to tomorrow`
-              : `${hidden.length} more overdue — move to tomorrow`}
-            onClick={() => onBump?.(hidden.map((t) => t.id))}
+            title={showHidden ? 'show less' : `${hidden.length} more — tap to see them`}
+            onClick={() => setShowHidden((v) => !v)}
             className="justify-center"
           >
-            <span className="text-[9px] font-bold" style={{ color: 'var(--text-faint)' }}>+{hidden.length}</span>
+            <span className="text-[9px] font-bold" style={{ color: 'var(--text-faint)' }}>{showHidden ? 'show less' : `+${hidden.length}`}</span>
           </Sticker>
         )}
       </AnimatePresence>
+      {hidden.length > 0 && (
+        <button
+          onClick={() => { onBump?.(hidden.map((t) => t.id)); setShowHidden(false) }}
+          className="rounded-md px-1 py-0.5 text-[9px] font-bold"
+          style={{ color: 'var(--text-faint)' }}
+        >
+          {personalized ? "bump 'em to tomorrow" : 'Move to tomorrow'}
+        </button>
+      )}
     </div>
   )
 }
@@ -411,7 +365,7 @@ function MiniChip({ task, overdue, variant, personalized = true, onToggle, onEdi
     >
       <button
         aria-label={`Complete ${task.title}`}
-        onClick={(e) => { e.stopPropagation(); flashComplete(e.currentTarget, { personalized }); onToggle(task.id) }}
+        onClick={(e) => { e.stopPropagation(); onToggle(task.id) }}
         className="bar-check grid h-[10px] w-[10px] shrink-0 place-items-center rounded-full border-[1.5px]"
       />
       <button onClick={() => onEdit?.(task)} className="min-w-0 flex-1 truncate text-left text-[10px] font-bold">
