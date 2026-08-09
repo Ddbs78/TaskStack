@@ -230,10 +230,17 @@ export default function Onboarding({ open, store, onFinish }) {
 
   useLayoutEffect(() => {
     const el = calloutRef.current
-    if (!el || phase !== 'spot' || !resolved) return undefined
-    // first placement of a step jumps (no transition) so the callout can't slide
-    // in from the top-left corner before it's positioned; re-places (scroll /
-    // resize) then glide.
+    if (!el) return undefined
+    // While the next target is being resolved/scrolled to, hide the callout so it
+    // doesn't sit visibly at the OLD position and then teleport to the new one.
+    // It fades back in, already at the new position, once we reach 'spot'.
+    if (phase !== 'spot' || !resolved) {
+      el.style.transition = 'opacity .15s ease'
+      el.style.opacity = '0'
+      return undefined
+    }
+    // first placement of a step jumps (no positional transition) so the callout
+    // can't slide across the screen before it's positioned.
     let first = true
     const place = () => {
       const r = resolved.getRect()
@@ -253,9 +260,12 @@ export default function Onboarding({ open, store, onFinish }) {
       const w = 380
       const h = el.offsetHeight
       const G = 20
+      // Position is NEVER transitioned — it always jumps to the correct spot, so
+      // the callout can never be seen sliding across the screen. The only motion
+      // is an opacity fade-in (enabled after the first placement below).
       Object.assign(el.style, {
         right: 'auto', bottom: 'auto', width: `${w}px`,
-        transition: first ? 'none' : 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1)',
+        transition: 'none',
       })
       const clampX = (x) => Math.max(16, Math.min(vw - w - 16, x))
       const clampY = (y) => Math.max(16, Math.min(vh - h - 16, y))
@@ -283,14 +293,10 @@ export default function Onboarding({ open, store, onFinish }) {
       el.style.left = `${Math.round(clampX(left))}px`
       el.style.top = `${Math.round(clampY(top))}px`
       if (first) {
-        // now that it's positioned, reveal it (fade only — no positional slide)
+        // positioned (still invisible) — now fade it in on the spot
         requestAnimationFrame(() => {
-          el.style.transition = 'opacity .2s ease'
+          el.style.transition = 'opacity .22s ease'
           el.style.opacity = '1'
-          // enable position glide for later re-places (scroll/resize)
-          requestAnimationFrame(() => {
-            el.style.transition = 'left .3s cubic-bezier(.22,.61,.36,1), top .3s cubic-bezier(.22,.61,.36,1), opacity .2s ease'
-          })
         })
       }
       first = false
@@ -318,7 +324,13 @@ export default function Onboarding({ open, store, onFinish }) {
 
   if (!open) return null
 
-  const asCard = s.kind === 'card' || phase === 'fallback' || phase === 'resolving' || phase === 'travelling'
+  // Only genuine card-kind steps (and the fallback when a target can't be found)
+  // render as a centred modal. A spotlight step must NOT flash a centred card
+  // during resolving/travelling — that centred frame sits left of the final
+  // right-side callout, so the eye read it as the card "shooting in from the
+  // left". During those phases the callout stays hidden (opacity 0, unplaced)
+  // and simply fades in at its position once resolved.
+  const asCard = s.kind === 'card' || phase === 'fallback'
   const showArt = s.kind === 'card' || phase === 'fallback'
 
   const panel = (
